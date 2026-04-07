@@ -3,6 +3,10 @@
     {
       "path": "/api/outpatient/fetch",
       "schedule": "0 21 * * 0"
+    },
+    {
+      "path": "/api/cleanup",
+      "schedule": "0 0 1 * *"
     }
   ]
 }

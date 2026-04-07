@@ -47,7 +47,6 @@ function EditInput({ value, onChange, placeholder }: {
   );
 }
 
-// 라벨 + 7개 요일 셀 한 줄
 function Row({
   label,
   labelColor,
@@ -63,7 +62,6 @@ function Row({
 }) {
   return (
     <div className="grid grid-cols-[32px_repeat(7,1fr)] md:grid-cols-[48px_repeat(7,1fr)] border-t border-gray-100">
-      {/* 라벨 열 */}
       <div className={clsx(
         "flex items-center justify-center px-0.5 border-r border-gray-100",
         isEditMode ? "bg-blue-50" : "bg-gray-50"
@@ -75,7 +73,6 @@ function Row({
           {label}
         </span>
       </div>
-      {/* 7 요일 셀 */}
       {weekDays.map((d) => (
         <div
           key={d.dateKey}
@@ -94,7 +91,6 @@ function Row({
 export default function CalendarGrid(props: CalendarGridProps) {
   const { calendarDays, getDayData, isEditMode, getEditData, onFieldChange } = props;
 
-  // 7일씩 주(week) 단위로 그룹화
   const weeks: CalendarDay[][] = [];
   for (let i = 0; i < calendarDays.length; i += 7) {
     weeks.push(calendarDays.slice(i, i + 7));
@@ -117,7 +113,6 @@ export default function CalendarGrid(props: CalendarGridProps) {
         ))}
       </div>
 
-      {/* 주(week) 블록 */}
       {weeks.map((week, weekIdx) => {
         const weekDays: WeekDayInfo[] = week.map(cd => {
           const dateKey = formatDateKey(cd.date);
@@ -129,7 +124,6 @@ export default function CalendarGrid(props: CalendarGridProps) {
           };
         });
 
-        // 이번 주에 저널/NGR/의국 데이터가 있는지 확인
         const hasJournal = weekDays.some(d =>
           d.calendarDay.isCurrentMonth &&
           resolveVal(d.editData?.journal_presenter, d.dayData.journal?.presenter) !== ""
@@ -145,12 +139,6 @@ export default function CalendarGrid(props: CalendarGridProps) {
           d.calendarDay.isCurrentMonth ? (d.dayData.department_events ?? []) : []
         );
         const uniqueEventNames = [...new Set(allEvents.map(e => e.event_name))];
-
-        // 토요일 외래
-        const satDay = weekDays.find(d => d.calendarDay.isSaturday && d.calendarDay.isCurrentMonth);
-        const satAmProfs = satDay?.dayData.outpatient?.am_professors ?? [];
-        const satPmProfs = satDay?.dayData.outpatient?.pm_professors ?? [];
-        const hasSatOutpatient = !isEditMode && (satAmProfs.length > 0 || satPmProfs.length > 0);
 
         return (
           <div key={weekIdx} className="border border-gray-200 rounded overflow-hidden">
@@ -178,7 +166,6 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   </div>
                 );
 
-                // 평일·일요일 → hover 팝오버 래핑 (비편집 모드)
                 if (!isEditMode && isCurrentMonth && !isSaturday) {
                   return (
                     <OutpatientPopover key={dateKey} date={date} outpatient={dayData.outpatient}>
@@ -190,10 +177,16 @@ export default function CalendarGrid(props: CalendarGridProps) {
               })}
             </div>
 
-            {/* 정규 */}
+            {/* 정규 (토요일에는 외래 교수 표시) */}
             <Row label="정규" weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
-                if (d.calendarDay.isWeekend) return null;
+                if (d.calendarDay.isSunday) return null;
+                if (d.calendarDay.isSaturday) {
+                  const profs = d.dayData.outpatient?.am_professors ?? [];
+                  return profs.length > 0
+                    ? <>{profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block">{n}</span>)}</>
+                    : null;
+                }
                 const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" />
@@ -272,7 +265,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   const ev = (d.dayData.department_events ?? []).find(e => e.event_name === eventName);
                   if (!ev) return null;
                   return (
-                    <span className="text-[9px] md:text-[11px] text-indigo-700 font-medium block truncate">
+                    <span className="text-[9px] md:text-[11px] text-indigo-700 font-medium break-words leading-tight">
                       {ev.event_name}
                       {ev.time && <span className="text-gray-400 ml-0.5 text-[8px]">{ev.time}</span>}
                     </span>
@@ -280,36 +273,6 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 }}
               />
             ))}
-
-            {/* 토요일 외래 */}
-            {hasSatOutpatient && satAmProfs.length > 0 && (
-              <Row label="오전" labelColor="text-rose-600" weekDays={weekDays} isEditMode={false}
-                renderCell={(d) => {
-                  if (!d.calendarDay.isSaturday) return null;
-                  return (
-                    <>
-                      {(d.dayData.outpatient?.am_professors ?? []).map(n => (
-                        <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block truncate">{n}</span>
-                      ))}
-                    </>
-                  );
-                }}
-              />
-            )}
-            {hasSatOutpatient && satPmProfs.length > 0 && (
-              <Row label="오후" labelColor="text-rose-600" weekDays={weekDays} isEditMode={false}
-                renderCell={(d) => {
-                  if (!d.calendarDay.isSaturday) return null;
-                  return (
-                    <>
-                      {(d.dayData.outpatient?.pm_professors ?? []).map(n => (
-                        <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block truncate">{n}</span>
-                      ))}
-                    </>
-                  );
-                }}
-              />
-            )}
 
           </div>
         );
