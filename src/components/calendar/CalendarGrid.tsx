@@ -135,10 +135,9 @@ export default function CalendarGrid(props: CalendarGridProps) {
             ? `${ngr.schedule_info} - ${ngr.person}` : "";
           return resolveVal(d.editData?.ngr_info, base) !== "";
         });
-        const allEvents = weekDays.flatMap(d =>
-          d.calendarDay.isCurrentMonth ? (d.dayData.department_events ?? []) : []
+        const hasEvents = weekDays.some(d =>
+          d.calendarDay.isCurrentMonth && (d.dayData.department_events ?? []).length > 0
         );
-        const uniqueEventNames = [...new Set(allEvents.map(e => e.event_name))];
 
         return (
           <div key={weekIdx} className="border border-gray-200 rounded overflow-hidden">
@@ -257,22 +256,26 @@ export default function CalendarGrid(props: CalendarGridProps) {
               />
             )}
 
-            {/* 의국 일정 */}
-            {uniqueEventNames.map(eventName => (
-              <Row key={eventName} label="일정" labelColor="text-indigo-600"
+            {/* 의국 일정 — 모든 이벤트를 하나의 행에 표시 */}
+            {hasEvents && (
+              <Row label="일정" labelColor="text-indigo-600"
                 weekDays={weekDays} isEditMode={false}
                 renderCell={(d) => {
-                  const ev = (d.dayData.department_events ?? []).find(e => e.event_name === eventName);
-                  if (!ev) return null;
+                  const evs = d.dayData.department_events ?? [];
+                  if (evs.length === 0) return null;
                   return (
-                    <span className="text-[9px] md:text-[11px] text-indigo-700 font-medium break-words leading-tight">
-                      {ev.event_name}
-                      {ev.time && <span className="text-gray-400 ml-0.5 text-[8px]">{ev.time}</span>}
-                    </span>
+                    <>
+                      {evs.map((ev) => (
+                        <span key={ev.event_name} className="text-[9px] md:text-[11px] text-indigo-700 font-medium break-words leading-tight block">
+                          {ev.event_name}
+                          {ev.time && <span className="text-gray-400 ml-0.5 text-[8px]">{ev.time}</span>}
+                        </span>
+                      ))}
+                    </>
                   );
                 }}
               />
-            ))}
+            )}
 
           </div>
         );
