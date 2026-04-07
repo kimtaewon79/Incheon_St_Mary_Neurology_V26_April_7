@@ -18,6 +18,7 @@ interface CalendarCellProps {
   onEditorClose: () => void;
 }
 
+// 편집 데이터와 원본 데이터 중 우선순위가 높은 값 반환
 function resolveValue(editValue: string | undefined, originalValue: string | undefined): string {
   if (editValue !== undefined) return editValue;
   return originalValue ?? "";
@@ -37,12 +38,14 @@ export default function CalendarCell({
   const { duty, journal, ngr } = dayData;
   const dateKey = formatDateKey(date);
 
+  // 셀 클릭 핸들러 (편집 모드 + 현재 달 셀에서만 작동)
   const handleCellClick = () => {
     if (isEditMode && isCurrentMonth) {
       onCellClick(dateKey);
     }
   };
 
+  // 표시할 값: 편집 데이터가 있으면 우선 사용
   const regularDuty = resolveValue(editData?.regular_duty, duty?.regular_duty);
   const erAm = resolveValue(editData?.er_am, duty?.er_am);
   const erPm = resolveValue(editData?.er_pm, duty?.er_pm);
@@ -69,15 +72,20 @@ export default function CalendarCell({
       className={clsx(
         "relative min-h-[90px] md:min-h-[130px] p-1 md:p-2 rounded border text-left",
         "transition-colors duration-100",
+        // 현재 달 여부
         isCurrentMonth
           ? "bg-white border-gray-200 cursor-pointer"
           : clsx(
               "bg-gray-50 border-gray-100 opacity-40",
+              // 편집 모드에서 이전/다음달 셀은 클릭 불가임을 명확히 표시
               isEditMode ? "cursor-not-allowed" : "cursor-default"
             ),
+        // 오늘 날짜 강조
         isToday && isCurrentMonth && "ring-2 ring-red-500 border-red-200 bg-red-50",
+        // 편집 모드 hover — 현재 달 셀에만 적용 (이전/다음달 셀은 hover 제거)
         isEditMode && isCurrentMonth && "hover:bg-blue-50 hover:border-blue-300",
         isEditMode && !isCurrentMonth && "pointer-events-none",
+        // 현재 편집 중인 셀
         isEditingThisCell && "border-blue-400 ring-2 ring-blue-300"
       )}
     >
@@ -96,6 +104,7 @@ export default function CalendarCell({
         </span>
       </div>
 
+      {/* 편집 모드 + 현재 편집 중인 셀 */}
       {isEditingThisCell && (
         <CalendarCellEditor
           date={date}
@@ -109,76 +118,82 @@ export default function CalendarCell({
         />
       )}
 
+      {/* 스케쥴 정보 표시 (편집 중이 아닐 때) */}
       {!isEditingThisCell && isCurrentMonth && (
         <div className="grid grid-cols-[auto_1fr] gap-x-1.5 gap-y-[3px] items-center mt-0.5">
           {isWeekend ? (
+            // 주말: 통합 당직 + 토요일 외래 인라인 표시
             <>
               {weekendDuty && (
                 <>
                   <Tag variant="weekend" label="당직" />
-                  <span className="text-xs md:text-[13px] text-gray-700 font-medium leading-tight truncate">{weekendDuty}</span>
+                  <span className="text-[9px] md:text-[13px] text-gray-700 font-medium leading-tight truncate">{weekendDuty}</span>
                 </>
               )}
               {isSaturday && (dayData.outpatient?.am_professors ?? []).map((name) => (
                 <>
                   <Tag key={`am-tag-${name}`} variant="outpatient" label="오전" />
-                  <span key={`am-name-${name}`} className="text-xs md:text-[13px] text-rose-700 font-medium leading-tight truncate">{name}</span>
+                  <span key={`am-name-${name}`} className="text-[9px] md:text-[13px] text-rose-700 font-medium leading-tight truncate">{name}</span>
                 </>
               ))}
               {isSaturday && (dayData.outpatient?.pm_professors ?? []).map((name) => (
                 <>
                   <Tag key={`pm-tag-${name}`} variant="outpatient" label="오후" />
-                  <span key={`pm-name-${name}`} className="text-xs md:text-[13px] text-rose-700 font-medium leading-tight truncate">{name}</span>
+                  <span key={`pm-name-${name}`} className="text-[9px] md:text-[13px] text-rose-700 font-medium leading-tight truncate">{name}</span>
                 </>
               ))}
             </>
           ) : (
+            // 평일: 각 필드 표시
             <>
               {regularDuty && (
                 <>
                   <Tag variant="regular" label="정규" />
-                  <span className="text-xs md:text-[13px] text-gray-800 font-medium leading-tight truncate">{regularDuty}</span>
+                  <span className="text-[9px] md:text-[13px] text-gray-800 font-medium leading-tight truncate">{regularDuty}</span>
                 </>
               )}
               {erAm && (
                 <>
                   <Tag variant="er-am" label="ER↑" />
-                  <span className="text-xs md:text-[13px] text-gray-800 font-medium leading-tight truncate">{erAm}</span>
+                  <span className="text-[9px] md:text-[13px] text-gray-800 font-medium leading-tight truncate">{erAm}</span>
                 </>
               )}
               {erPm && (
                 <>
                   <Tag variant="er-pm" label="ER↓" />
-                  <span className="text-xs md:text-[13px] text-gray-800 font-medium leading-tight truncate">{erPm}</span>
+                  <span className="text-[9px] md:text-[13px] text-gray-800 font-medium leading-tight truncate">{erPm}</span>
                 </>
               )}
               {nightDuty && (
                 <>
                   <Tag variant="night" label="당직" />
-                  <span className="text-xs md:text-[13px] text-gray-800 font-medium leading-tight truncate">{nightDuty}</span>
+                  <span className="text-[9px] md:text-[13px] text-gray-800 font-medium leading-tight truncate">{nightDuty}</span>
                 </>
               )}
             </>
           )}
 
+          {/* 저널&토픽 (요일 무관) */}
           {journalPresenter && (
             <>
               <Tag variant="journal" label="저널" />
-              <span className="text-xs md:text-[13px] text-gray-800 font-medium leading-tight truncate">{journalPresenter}</span>
+              <span className="text-[9px] md:text-[13px] text-gray-800 font-medium leading-tight truncate">{journalPresenter}</span>
             </>
           )}
 
+          {/* 인천NGR */}
           {ngrInfo && (
             <>
               <Tag variant="ngr" label="NGR" />
-              <span className="text-xs md:text-[13px] text-gray-800 font-medium leading-tight truncate">{ngrInfo}</span>
+              <span className="text-[9px] md:text-[13px] text-gray-800 font-medium leading-tight truncate">{ngrInfo}</span>
             </>
           )}
 
+          {/* 의국 일정 */}
           {(dayData.department_events ?? []).map((ev) => (
             <>
               <Tag key={`tag-${ev.event_name + ev.date}`} variant="event" label="일정" />
-              <span key={`name-${ev.event_name + ev.date}`} className="text-xs md:text-[13px] text-indigo-800 font-medium leading-tight truncate">
+              <span key={`name-${ev.event_name + ev.date}`} className="text-[9px] md:text-[13px] text-indigo-800 font-medium leading-tight truncate">
                 {ev.event_name}
                 {ev.time && <span className="text-gray-400 font-normal ml-1 text-[11px]">{ev.time}</span>}
               </span>
@@ -187,6 +202,7 @@ export default function CalendarCell({
         </div>
       )}
 
+      {/* 편집 모드 표시 오버레이 힌트 */}
       {isEditMode && isCurrentMonth && !isEditingThisCell && (
         <div className="absolute inset-0 rounded opacity-0 hover:opacity-100 transition-opacity
                         flex items-end justify-center pb-1 pointer-events-none">
@@ -199,9 +215,14 @@ export default function CalendarCell({
     </div>
   );
 
+  // 토요일은 외래를 셀 안에 직접 표시 — 팝오버 불필요
+  // 그 외 평일/일요일은 호버 팝오버 래핑
   if (!isEditMode && isCurrentMonth && !isSaturday) {
     return (
-      <OutpatientPopover date={date} outpatient={dayData.outpatient}>
+      <OutpatientPopover
+        date={date}
+        outpatient={dayData.outpatient}
+      >
         {cellContent}
       </OutpatientPopover>
     );
