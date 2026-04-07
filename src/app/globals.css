@@ -1,26 +1,86 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Radix UI Popover 애니메이션 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@keyframes fadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-state="open"] {
+  animation: fadeIn 150ms ease-out;
+}
+
+[data-state="closed"] {
+  animation: fadeOut 100ms ease-in;
+}
+
+/* 스크롤바 스타일 (달력 셀 내부) */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #f9fafb;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans KR", sans-serif;
+}
+
+/* ===== 인쇄 / PDF 내보내기 스타일 ===== */
+@media print {
+  /* 앱 타이틀 바, 편집 모드 배너, 에러 배너, 범례, 안내 텍스트 숨김 */
+  body > div > div:first-child,   /* 앱 타이틀 바 */
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* main 패딩/마진 제거 */
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 달력 헤더의 버튼들 숨기고 연월 텍스트만 표시 */
+  header button,
+  header a,
+  header [data-print-hide] {
+    display: none !important;
+  }
+
+  /* 페이지 여백 */
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  /* 셀이 페이지를 넘어가지 않도록 */
+  .grid > * {
+    break-inside: avoid;
+  }
+
+  /* 팝오버 숨김 */
+  [data-radix-popper-content-wrapper] {
+    display: none !important;
+  }
 }
