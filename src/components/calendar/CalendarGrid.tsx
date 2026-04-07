@@ -30,16 +30,53 @@ function resolveVal(edit: string | undefined, orig: string | undefined): string 
   return edit !== undefined ? edit : (orig ?? "");
 }
 
-function EditInput({ value, onChange, placeholder }: {
+function EditInput({ value, onChange, placeholder, dateKey, field }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  dateKey: string;
+  field: string;
 }) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const isDown = e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey);
+    const isUp   = e.key === "ArrowUp"   || (e.key === "Tab" && e.shiftKey);
+
+    if (isDown || isUp) {
+      e.preventDefault();
+      const siblings = Array.from(
+        document.querySelectorAll<HTMLInputElement>(`input[data-date="${dateKey}"]`)
+      );
+      const idx = siblings.findIndex(el => el.dataset.field === field);
+      const next = isDown ? idx + 1 : idx - 1;
+      if (next >= 0 && next < siblings.length) siblings[next].focus();
+      return;
+    }
+
+    // 좌/우 화살표: 텍스트 끝/시작에서만 날짜 간 이동
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const el = e.currentTarget;
+      const atStart = el.selectionStart === 0 && el.selectionEnd === 0;
+      const atEnd   = el.selectionStart === el.value.length && el.selectionEnd === el.value.length;
+      if ((e.key === "ArrowLeft" && atStart) || (e.key === "ArrowRight" && atEnd)) {
+        e.preventDefault();
+        const row = Array.from(
+          document.querySelectorAll<HTMLInputElement>(`input[data-field="${field}"]`)
+        );
+        const idx = row.findIndex(el2 => el2.dataset.date === dateKey);
+        const next = e.key === "ArrowLeft" ? idx - 1 : idx + 1;
+        if (next >= 0 && next < row.length) row[next].focus();
+      }
+    }
+  };
+
   return (
     <input
       type="text"
+      data-date={dateKey}
+      data-field={field}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={handleKeyDown}
       placeholder={placeholder}
       className="w-full text-[9px] md:text-xs bg-white border border-blue-200 rounded px-0.5 py-px
                  focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-300"
@@ -47,6 +84,7 @@ function EditInput({ value, onChange, placeholder }: {
   );
 }
 
+// 라벨 + 7개 요일 셀 한 줄
 function Row({
   label,
   labelColor,
@@ -62,6 +100,7 @@ function Row({
 }) {
   return (
     <div className="grid grid-cols-[32px_repeat(7,1fr)] md:grid-cols-[48px_repeat(7,1fr)] border-t border-gray-100">
+      {/* 라벨 열 */}
       <div className={clsx(
         "flex items-center justify-center px-0.5 border-r border-gray-100",
         isEditMode ? "bg-blue-50" : "bg-gray-50"
@@ -73,6 +112,7 @@ function Row({
           {label}
         </span>
       </div>
+      {/* 7 요일 셀 */}
       {weekDays.map((d) => (
         <div
           key={d.dateKey}
@@ -91,6 +131,7 @@ function Row({
 export default function CalendarGrid(props: CalendarGridProps) {
   const { calendarDays, getDayData, isEditMode, getEditData, onFieldChange } = props;
 
+  // 7일씩 주(week) 단위로 그룹화
   const weeks: CalendarDay[][] = [];
   for (let i = 0; i < calendarDays.length; i += 7) {
     weeks.push(calendarDays.slice(i, i + 7));
@@ -113,6 +154,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
         ))}
       </div>
 
+      {/* 주(week) 블록 */}
       {weeks.map((week, weekIdx) => {
         const weekDays: WeekDayInfo[] = week.map(cd => {
           const dateKey = formatDateKey(cd.date);
@@ -124,6 +166,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
           };
         });
 
+        // 이번 주에 저널/NGR/의국 데이터가 있는지 확인
         const hasJournal = weekDays.some(d =>
           d.calendarDay.isCurrentMonth &&
           resolveVal(d.editData?.journal_presenter, d.dayData.journal?.presenter) !== ""
@@ -138,6 +181,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
         const hasEvents = weekDays.some(d =>
           d.calendarDay.isCurrentMonth && (d.dayData.department_events ?? []).length > 0
         );
+
 
         return (
           <div key={weekIdx} className="border border-gray-200 rounded overflow-hidden">
@@ -165,6 +209,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   </div>
                 );
 
+                // 평일·일요일 → hover 팝오버 래핑 (비편집 모드)
                 if (!isEditMode && isCurrentMonth && !isSaturday) {
                   return (
                     <OutpatientPopover key={dateKey} date={date} outpatient={dayData.outpatient}>
@@ -176,20 +221,20 @@ export default function CalendarGrid(props: CalendarGridProps) {
               })}
             </div>
 
-            {/* 정규 (토요일에는 외래 교수 표시) */}
+            {/* 정규 (토요일엔 외래 교수 표시) */}
             <Row label="정규" weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 if (d.calendarDay.isSunday) return null;
                 if (d.calendarDay.isSaturday) {
                   const profs = d.dayData.outpatient?.am_professors ?? [];
                   return profs.length > 0
-                    ? <>{profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block truncate">{n}</span>)}</>
+                    ? <>{profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block">{n}</span>)}</>
                     : null;
                 }
                 const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
                 return isEditMode
-                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-gray-800 font-medium block truncate">{val}</span> : null;
+                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" dateKey={d.dateKey} field="regular_duty" />
+                  : val ? <span className="text-[9px] md:text-[11px] text-gray-800 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -199,8 +244,8 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 if (d.calendarDay.isWeekend) return null;
                 const val = resolveVal(d.editData?.er_am, d.dayData.duty?.er_am);
                 return isEditMode
-                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_am", v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-orange-700 font-medium block truncate">{val}</span> : null;
+                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_am", v)} placeholder="담당자" dateKey={d.dateKey} field="er_am" />
+                  : val ? <span className="text-[9px] md:text-[11px] text-orange-700 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -210,8 +255,8 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 if (d.calendarDay.isWeekend) return null;
                 const val = resolveVal(d.editData?.er_pm, d.dayData.duty?.er_pm);
                 return isEditMode
-                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_pm", v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-amber-700 font-medium block truncate">{val}</span> : null;
+                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_pm", v)} placeholder="담당자" dateKey={d.dateKey} field="er_pm" />
+                  : val ? <span className="text-[9px] md:text-[11px] text-amber-700 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -223,8 +268,8 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   : resolveVal(d.editData?.night_duty, d.dayData.duty?.night_duty);
                 const field: keyof EditableDayData = d.calendarDay.isWeekend ? "weekend_duty" : "night_duty";
                 return isEditMode
-                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, field, v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-purple-700 font-medium block truncate">{val}</span> : null;
+                  ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, field, v)} placeholder="담당자" dateKey={d.dateKey} field={field} />
+                  : val ? <span className="text-[9px] md:text-[11px] text-purple-700 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -235,8 +280,8 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   if (d.calendarDay.isWeekend) return null;
                   const val = resolveVal(d.editData?.journal_presenter, d.dayData.journal?.presenter);
                   return isEditMode
-                    ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "journal_presenter", v)} placeholder="발표자" />
-                    : val ? <span className="text-[9px] md:text-[11px] text-green-700 font-medium block truncate">{val}</span> : null;
+                    ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "journal_presenter", v)} placeholder="발표자" dateKey={d.dateKey} field="journal_presenter" />
+                    : val ? <span className="text-[9px] md:text-[11px] text-green-700 font-medium block">{val}</span> : null;
                 }}
               />
             )}
@@ -250,7 +295,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                     ? `${ngr.schedule_info} - ${ngr.person}` : "";
                   const val = resolveVal(d.editData?.ngr_info, base);
                   return isEditMode
-                    ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "ngr_info", v)} placeholder="일정" />
+                    ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "ngr_info", v)} placeholder="일정" dateKey={d.dateKey} field="ngr_info" />
                     : val ? <span className="text-[9px] md:text-[11px] text-teal-700 font-medium block truncate">{val}</span> : null;
                 }}
               />
@@ -272,6 +317,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 }}
               />
             )}
+
 
           </div>
         );
