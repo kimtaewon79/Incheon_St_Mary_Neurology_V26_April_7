@@ -55,11 +55,26 @@ function sanitizeNgr(row: Record<string, unknown>) {
   }
 }
 
+// 긴 의국 일정 이름을 짧은 한글명으로 정규화
+const EVENT_NAME_MAP: [RegExp, string][] = [
+  [/epilepsy\s*conference/i,             '뇌전증집담회'],
+  [/ms\s*&?\s*peripheral\s*conference/i, '말초집담회'],
+  [/staff\s*lecture/i,                   '스텝강의'],
+  [/stroke\s*conference/i,               '뇌졸중집담회'],
+]
+
+function normalizeEventName(name: string): string {
+  for (const [pattern, replacement] of EVENT_NAME_MAP) {
+    if (pattern.test(name)) return replacement
+  }
+  return name
+}
+
 function sanitizeDept(row: Record<string, unknown>) {
   const date = String(row.date ?? '').trim()
   return {
     date,
-    event_name: String(row.event_name ?? '').trim(),
+    event_name: normalizeEventName(String(row.event_name ?? '').trim()),
     time:       String(row.time ?? '').trim(),
     location:   String(row.location ?? '').trim(),
     year_month: date.slice(0, 7),
