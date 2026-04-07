@@ -3,7 +3,7 @@ import { clsx } from "clsx";
 export type TagVariant =
   | "regular"    // 정규 당직 - 파란색
   | "er-am"      // ER 오전 - 오렌지
-  | "er-pm"      // ER 오후 - 앨버
+  | "er-pm"      // ER 오후 - 앰버
   | "night"      // 야간 당직 - 보라
   | "journal"    // 저널&토픽 - 초록
   | "ngr"        // 인천NGR - 틸
@@ -48,7 +48,7 @@ export default function Tag({ variant = "default", label, className }: TagProps)
   return (
     <span
       className={clsx(
-        "inline-block text-[11px] md:text-xs px-1.5 py-0.5 rounded font-semibold leading-tight whitespace-nowrap",
+        "inline-block text-[9px] md:text-[11px] px-1 md:px-1.5 py-0.5 rounded font-semibold leading-tight whitespace-nowrap",
         variantStyles[variant],
         className
       )}
