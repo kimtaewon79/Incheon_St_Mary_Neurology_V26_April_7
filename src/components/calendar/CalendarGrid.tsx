@@ -183,13 +183,13 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 if (d.calendarDay.isSaturday) {
                   const profs = d.dayData.outpatient?.am_professors ?? [];
                   return profs.length > 0
-                    ? <>{profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block">{n}</span>)}</>
+                    ? <>{profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block truncate">{n}</span>)}</>
                     : null;
                 }
                 const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-gray-800 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[9px] md:text-[11px] text-gray-800 font-medium block truncate">{val}</span> : null;
               }}
             />
 
@@ -200,7 +200,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 const val = resolveVal(d.editData?.er_am, d.dayData.duty?.er_am);
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_am", v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-orange-700 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[9px] md:text-[11px] text-orange-700 font-medium block truncate">{val}</span> : null;
               }}
             />
 
@@ -211,7 +211,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 const val = resolveVal(d.editData?.er_pm, d.dayData.duty?.er_pm);
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_pm", v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-amber-700 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[9px] md:text-[11px] text-amber-700 font-medium block truncate">{val}</span> : null;
               }}
             />
 
@@ -224,7 +224,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 const field: keyof EditableDayData = d.calendarDay.isWeekend ? "weekend_duty" : "night_duty";
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, field, v)} placeholder="담당자" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-purple-700 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[9px] md:text-[11px] text-purple-700 font-medium block truncate">{val}</span> : null;
               }}
             />
 
@@ -236,7 +236,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   const val = resolveVal(d.editData?.journal_presenter, d.dayData.journal?.presenter);
                   return isEditMode
                     ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "journal_presenter", v)} placeholder="발표자" />
-                    : val ? <span className="text-[9px] md:text-[11px] text-green-700 font-medium block">{val}</span> : null;
+                    : val ? <span className="text-[9px] md:text-[11px] text-green-700 font-medium block truncate">{val}</span> : null;
                 }}
               />
             )}
@@ -256,22 +256,18 @@ export default function CalendarGrid(props: CalendarGridProps) {
               />
             )}
 
-            {/* 의국 일정 — 모든 이벤트를 하나의 행에 표시 */}
+            {/* 의국 일정 — 같은 날 여러 이벤트는 "/" 로 연결해 한 줄 고정 */}
             {hasEvents && (
               <Row label="일정" labelColor="text-indigo-600"
                 weekDays={weekDays} isEditMode={false}
                 renderCell={(d) => {
                   const evs = d.dayData.department_events ?? [];
                   if (evs.length === 0) return null;
+                  const label = evs.map(ev => ev.event_name).join(" / ");
                   return (
-                    <>
-                      {evs.map((ev) => (
-                        <span key={ev.event_name} className="text-[9px] md:text-[11px] text-indigo-700 font-medium break-words leading-tight block">
-                          {ev.event_name}
-                          {ev.time && <span className="text-gray-400 ml-0.5 text-[8px]">{ev.time}</span>}
-                        </span>
-                      ))}
-                    </>
+                    <span className="text-[9px] md:text-[11px] text-indigo-700 font-medium block truncate">
+                      {label}
+                    </span>
                   );
                 }}
               />
