@@ -1,12 +1,12 @@
-// 당직 스케쁜 타입
+// 당직 스케쥴 타입
 export interface DutySchedule {
-  date: string;
-  regular_duty: string;
-  er_am: string;
-  er_pm: string;
-  night_duty: string;
+  date: string; // "YYYY-MM-DD"
+  regular_duty: string; // 정규 당직 담당자
+  er_am: string; // ER 오전 담당자
+  er_pm: string; // ER 오후 담당자
+  night_duty: string; // 야간 당직 담당자
   is_weekend: boolean;
-  weekend_duty?: string;
+  weekend_duty?: string; // 주말 통합 당직 담당자
 }
 
 // 저널&토픽 타입
@@ -23,7 +23,7 @@ export interface IncheonNGR {
   person: string;
 }
 
-// 외래 스케쁜 타입
+// 외래 스케쥴 타입 (Supabase outpatient 테이블과 동일)
 export interface OutpatientSchedule {
   date: string;
   am_professors: string[];
@@ -65,8 +65,9 @@ export interface EditableDayData {
   night_duty: string;
   weekend_duty: string;
   journal_presenter: string;
-  ngr_info: string;
+  ngr_info: string;    // NGR (일정 행에 통합)
+  event_info: string;  // 의국 일정 (NGR 행과 통합, "/" 구분 복수 입력)
 }
 
-// 편집 상태 맵 타입
+// 편집 상태 맵 타입 (dateString -> EditableDayData)
 export type EditStateMap = Record<string, EditableDayData>;
