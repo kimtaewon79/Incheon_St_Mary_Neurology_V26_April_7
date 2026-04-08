@@ -219,7 +219,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
               })}
             </div>
 
-            {/* 정규 — 토요일: 편집 모드면 입력칸, 뷰 모드면 외래 교수 표시 */}
+            {/* 정규 — 토요일: 편집 모드면 입력칸, 뷰 모드면 수동 입력값 + 외래 교수 표시 */}
             <Row label="정규" weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 if (d.calendarDay.isSunday) return null;
@@ -228,10 +228,16 @@ export default function CalendarGrid(props: CalendarGridProps) {
                     const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
                     return <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" dateKey={d.dateKey} field="regular_duty" />;
                   }
+                  // 뷰 모드: 수동 입력값 위에, 자동 수집 외래 교수 아래 표시
+                  const regularVal = d.dayData.duty?.regular_duty;
                   const profs = d.dayData.outpatient?.am_professors ?? [];
-                  return profs.length > 0
-                    ? <>{profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block">{n}</span>)}</>
-                    : null;
+                  if (!regularVal && profs.length === 0) return null;
+                  return (
+                    <>
+                      {regularVal && <span className="text-[9px] md:text-[11px] text-gray-800 font-medium block">{regularVal}</span>}
+                      {profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block">{n}</span>)}
+                    </>
+                  );
                 }
                 const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
                 return isEditMode
