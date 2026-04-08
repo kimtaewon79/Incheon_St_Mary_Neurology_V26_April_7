@@ -219,11 +219,15 @@ export default function CalendarGrid(props: CalendarGridProps) {
               })}
             </div>
 
-            {/* 정규 (토요일엔 외래 교수 표시) */}
+            {/* 정규 — 토요일: 편집 모드면 입력칸, 뷰 모드면 외래 교수 표시 */}
             <Row label="정규" weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 if (d.calendarDay.isSunday) return null;
                 if (d.calendarDay.isSaturday) {
+                  if (isEditMode) {
+                    const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
+                    return <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" dateKey={d.dateKey} field="regular_duty" />;
+                  }
                   const profs = d.dayData.outpatient?.am_professors ?? [];
                   return profs.length > 0
                     ? <>{profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block">{n}</span>)}</>
