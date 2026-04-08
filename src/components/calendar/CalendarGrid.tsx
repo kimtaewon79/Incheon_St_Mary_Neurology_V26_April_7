@@ -166,22 +166,20 @@ export default function CalendarGrid(props: CalendarGridProps) {
           };
         });
 
-        // 이번 주에 저널/NGR/의국 데이터가 있는지 확인
+        // 이번 주에 저널/일정(NGR+의국) 데이터가 있는지 확인
         const hasJournal = weekDays.some(d =>
           d.calendarDay.isCurrentMonth &&
           resolveVal(d.editData?.journal_presenter, d.dayData.journal?.presenter) !== ""
         );
-        const hasNgr = weekDays.some(d => {
+        const has일정 = weekDays.some(d => {
           if (!d.calendarDay.isCurrentMonth) return false;
           const ngr = d.dayData.ngr;
-          const base = ngr && (ngr.schedule_info || ngr.person)
+          const ngrBase = ngr && (ngr.schedule_info || ngr.person)
             ? `${ngr.schedule_info} - ${ngr.person}` : "";
-          return resolveVal(d.editData?.ngr_info, base) !== "";
+          const existingEvents = (d.dayData.department_events ?? []).map(e => e.event_name).join(" / ");
+          return resolveVal(d.editData?.ngr_info, ngrBase) !== "" ||
+                 resolveVal(d.editData?.event_info, existingEvents) !== "";
         });
-        const hasEvents = weekDays.some(d =>
-          d.calendarDay.isCurrentMonth && (d.dayData.department_events ?? []).length > 0
-        );
-
 
         return (
           <div key={weekIdx} className="border border-gray-200 rounded overflow-hidden">
@@ -286,38 +284,32 @@ export default function CalendarGrid(props: CalendarGridProps) {
               />
             )}
 
-            {/* NGR */}
-            {(hasNgr || isEditMode) && (
-              <Row label="NGR" labelColor="text-teal-600" weekDays={weekDays} isEditMode={isEditMode}
+            {/* 일정 (NGR + 의국 일정 통합, 토요일 포함) */}
+            {(has일정 || isEditMode) && (
+              <Row label="일정" labelColor="text-indigo-600" weekDays={weekDays} isEditMode={isEditMode}
                 renderCell={(d) => {
                   const ngr = d.dayData.ngr;
-                  const base = ngr && (ngr.schedule_info || ngr.person)
+                  const ngrBase = ngr && (ngr.schedule_info || ngr.person)
                     ? `${ngr.schedule_info} - ${ngr.person}` : "";
-                  const val = resolveVal(d.editData?.ngr_info, base);
-                  return isEditMode
-                    ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "ngr_info", v)} placeholder="일정" dateKey={d.dateKey} field="ngr_info" />
-                    : val ? <span className="text-[9px] md:text-[11px] text-teal-700 font-medium block truncate">{val}</span> : null;
+                  const ngrVal = resolveVal(d.editData?.ngr_info, ngrBase);
+                  const existingEvents = (d.dayData.department_events ?? []).map(e => e.event_name).join(" / ");
+                  const eventVal = resolveVal(d.editData?.event_info, existingEvents);
+
+                  if (isEditMode) {
+                    return (
+                      <div className="space-y-px">
+                        <EditInput value={ngrVal} onChange={(v) => onFieldChange(d.dateKey, "ngr_info", v)} placeholder="NGR" dateKey={d.dateKey} field="ngr_info" />
+                        <EditInput value={eventVal} onChange={(v) => onFieldChange(d.dateKey, "event_info", v)} placeholder="일정" dateKey={d.dateKey} field="event_info" />
+                      </div>
+                    );
+                  }
+                  const combined = [ngrVal, eventVal].filter(Boolean).join(" / ");
+                  return combined
+                    ? <span className="text-[9px] md:text-[11px] text-indigo-700 font-medium block truncate">{combined}</span>
+                    : null;
                 }}
               />
             )}
-
-            {/* 의국 일정 — 같은 날 여러 이벤트는 "/" 로 연결해 한 줄 고정 */}
-            {hasEvents && (
-              <Row label="일정" labelColor="text-indigo-600"
-                weekDays={weekDays} isEditMode={false}
-                renderCell={(d) => {
-                  const evs = d.dayData.department_events ?? [];
-                  if (evs.length === 0) return null;
-                  const label = evs.map(ev => ev.event_name).join(" / ");
-                  return (
-                    <span className="text-[9px] md:text-[11px] text-indigo-700 font-medium block truncate">
-                      {label}
-                    </span>
-                  );
-                }}
-              />
-            )}
-
 
           </div>
         );
