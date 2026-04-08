@@ -84,6 +84,7 @@ export default function HomePage() {
       weekend_duty: duty?.weekend_duty ?? "",
       journal_presenter: journal?.presenter ?? "",
       ngr_info: ngr && (ngr.schedule_info || ngr.person) ? `${ngr.schedule_info} - ${ngr.person}` : "",
+      event_info: (dayData.department_events ?? []).map(e => e.event_name).join(" / "),
     };
   };
 
@@ -107,7 +108,7 @@ export default function HomePage() {
             인천성모병원 신경과
           </span>
           <span className="hidden md:inline text-sm text-gray-400">|</span>
-          <span className="hidden md:inline text-sm text-gray-500">스케쁜 달력</span>
+          <span className="hidden md:inline text-sm text-gray-500">스케쥴 달력</span>
         </div>
         <div className="flex items-center gap-1">
           {/* 새로고침 버튼 */}
@@ -123,7 +124,7 @@ export default function HomePage() {
             href="/upload"
             className="flex items-center gap-1.5 text-xs md:text-sm text-gray-500 hover:text-blue-600
                        transition-colors px-2 py-1 rounded hover:bg-blue-50"
-            aria-label="스케쁜 파일 업로드 페이지로 이동"
+            aria-label="스케쥴 파일 업로드 페이지로 이동"
           >
             <Upload className="w-3.5 h-3.5" />
             <span className="hidden md:inline">업로드</span>
@@ -218,16 +219,15 @@ export default function HomePage() {
           <LegendItem color="bg-amber-100 text-amber-700" label="ER 오후" />
           <LegendItem color="bg-purple-100 text-purple-700" label="야간 당직" />
           <LegendItem color="bg-green-100 text-green-700" label="저널&amp;토픽" />
-          <LegendItem color="bg-teal-100 text-teal-700" label="인천NGR" />
           <LegendItem color="bg-gray-100 text-gray-600" label="주말 통합 당직" />
-          <LegendItem color="bg-indigo-100 text-indigo-700" label="의국 일정" />
+          <LegendItem color="bg-indigo-100 text-indigo-700" label="의국 일정 / NGR" />
           <LegendItem color="bg-rose-100 text-rose-700" label="토요일 외래" />
         </div>
 
         {/* 데이터 없을 때 안내 */}
         {!loading && scheduleMap.size === 0 && !error && (
           <div className="mt-4 text-center text-sm text-gray-400 py-6">
-            이 달의 스케쁜 데이터가 없습니다.{" "}
+            이 달의 스케쥴 데이터가 없습니다.{" "}
             <Link href="/upload" className="text-blue-500 hover:underline">
               파일을 업로드
             </Link>
