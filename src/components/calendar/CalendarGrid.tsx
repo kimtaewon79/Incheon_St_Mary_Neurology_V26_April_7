@@ -181,6 +181,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                  resolveVal(d.editData?.event_info, existingEvents) !== "";
         });
 
+
         return (
           <div key={weekIdx} className="border border-gray-200 rounded overflow-hidden">
 
@@ -193,14 +194,14 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   <div className={clsx(
                     "py-1 md:py-1.5 text-center",
                     !isCurrentMonth && "opacity-20",
-                    isToday && isCurrentMonth && "bg-red-50",
+                    isToday && isCurrentMonth && "bg-red-100 ring-2 ring-red-400 ring-inset",
                   )}>
                     <span className={clsx(
                       "text-xs md:text-sm font-bold",
                       isSunday && "text-red-500",
                       isSaturday && "text-blue-500",
                       !isSunday && !isSaturday && "text-gray-700",
-                      isToday && isCurrentMonth && "text-red-600"
+                      isToday && isCurrentMonth && "text-red-700"
                     )}>
                       {date.getDate()}
                     </span>
@@ -219,7 +220,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
               })}
             </div>
 
-            {/* 정규 — 토요일: 편집 모드면 입력칸, 뷰 모드면 수동 입력값 + 외래 교수 표시 */}
+            {/* 정규 (토요일엔 외래 교수 표시) */}
             <Row label="정규" weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 if (d.calendarDay.isSunday) return null;
@@ -228,7 +229,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                     const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
                     return <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" dateKey={d.dateKey} field="regular_duty" />;
                   }
-                  // 뷰 모드: 수동 입력값 위에, 자동 수집 외래 교수 아래 표시
+                  // 뷰 모드: 수동 입력값 + 자동 수집 외래 교수 모두 표시
                   const regularVal = d.dayData.duty?.regular_duty;
                   const profs = d.dayData.outpatient?.am_professors ?? [];
                   if (!regularVal && profs.length === 0) return null;
@@ -294,7 +295,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
               />
             )}
 
-            {/* 일정 (NGR + 의국 일정 통합, 토요일 포함) */}
+            {/* 일정 (NGR + 의국 일정 통합) */}
             {(has일정 || isEditMode) && (
               <Row label="일정" labelColor="text-indigo-600" weekDays={weekDays} isEditMode={isEditMode}
                 renderCell={(d) => {
@@ -320,6 +321,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 }}
               />
             )}
+
 
           </div>
         );
