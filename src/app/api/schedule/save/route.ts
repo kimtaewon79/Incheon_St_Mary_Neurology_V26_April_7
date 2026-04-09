@@ -10,9 +10,12 @@ const TABLE_MAP: Record<ScheduleType, string> = {
   dept: 'Incheon_St_Mary_Neurology_department_event',
 }
 
+// AI 가 반환한 원시 데이터를 Supabase 스키마에 맞게 정규화
 function sanitizeDuty(row: Record<string, unknown>) {
   const date = String(row.date ?? '').trim()
+  // year_month 가 없으면 date에서 추출
   const yearMonth = String(row.year_month ?? date.slice(0, 7)).trim()
+  // is_weekend: boolean/string 모두 처리
   const rawWeekend = row.is_weekend
   const dayOfWeek = date ? new Date(date + 'T00:00:00').getDay() : -1
   const isWeekend =
@@ -20,7 +23,7 @@ function sanitizeDuty(row: Record<string, unknown>) {
       ? rawWeekend
       : rawWeekend === 'true' || rawWeekend === '1' || rawWeekend === true
         ? true
-        : dayOfWeek === 0 || dayOfWeek === 6
+        : dayOfWeek === 0 || dayOfWeek === 6  // 날짜로 재계산
 
   return {
     date,
@@ -57,10 +60,10 @@ function sanitizeNgr(row: Record<string, unknown>) {
 
 // 긴 의국 일정 이름을 짧은 한글명으로 정규화
 const EVENT_NAME_MAP: [RegExp, string][] = [
-  [/epilepsy\s*conference/i,             '뇌전증집담회'],
+  [/epilepsy\s*conference/i,          '뇌전증집담회'],
   [/ms\s*&?\s*peripheral\s*conference/i, '말초집담회'],
-  [/staff\s*lecture/i,                   '스텝강의'],
-  [/stroke\s*conference/i,               '뇌졸중집담회'],
+  [/staff\s*lecture/i,                '스텝강의'],
+  [/stroke\s*conference/i,            '뇌졸중집담회'],
 ]
 
 function normalizeEventName(name: string): string {
@@ -102,16 +105,28 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitize = SANITIZERS[type]
-    const rows = data
+    const rawRows = data
       .map(sanitize)
-      .filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(String(r.date)))
+      .filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(String(r.date))) // 날짜 형식 검증
 
-    if (rows.length === 0) {
+    if (rawRows.length === 0) {
       return NextResponse.json({ error: '유효한 날짜 형식(YYYY-MM-DD)의 행이 없습니다.' }, { status: 400 })
     }
 
+    // 같은 conflict key가 배치 안에 중복되면 Postgres 에러 발생 — 뒤 항목 우선으로 중복 제거
+    const deduped = new Map<string, Record<string, unknown>>()
+    for (const row of rawRows) {
+      const key = type === 'dept'
+        ? `${row.date}__${row.event_name}`
+        : String(row.date)
+      deduped.set(key, row)
+    }
+    const rows = Array.from(deduped.values())
+
     const conflictKey = type === 'dept' ? 'date,event_name' : 'date'
-    const { error } = await supabase.from(TABLE_MAP[type]).upsert(rows, { onConflict: conflictKey })
+    const { error } = await supabase
+      .from(TABLE_MAP[type])
+      .upsert(rows, { onConflict: conflictKey })
 
     if (error) {
       console.error('Supabase upsert 오류:', error)
