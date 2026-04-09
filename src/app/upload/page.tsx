@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Upload, FileText, CheckCircle, AlertCircle, Loader2, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 
-type FileType = "journal" | "ngr" | "dept";
+type FileType = "duty" | "journal" | "ngr" | "dept";
 
 // 월별 업로드 타입 (년월 지정 필요)
-const MONTHLY_TYPES: FileType[] = ["dept"];
+const MONTHLY_TYPES: FileType[] = ["duty", "dept"];
 
 function currentYearMonth() {
   const now = new Date();
@@ -17,6 +17,7 @@ function currentYearMonth() {
 }
 
 const FILE_TYPE_OPTIONS: { value: FileType; label: string; description: string }[] = [
+  { value: "duty",    label: "당직표",        description: "신경과 월별 당직 스케쥴 (정규/ER/당직)" },
   { value: "journal", label: "저널&토픽",     description: "점심 저널 클럽 발표 일정 파일 (연간)" },
   { value: "ngr",     label: "인천NGR",      description: "인천 신경과 정기 일정 파일 (연간)" },
   { value: "dept",    label: "의국 일정표",   description: "신경과 전체 의국 월별 일정표 (Epilepsy/치매/MS/Staff Lecture/NGR 등)" },
@@ -81,9 +82,11 @@ export default function UploadPage() {
       }
 
       let rows = json.data as AnalysisRow[];
+      // 월별 타입의 경우, AI가 잘못된 년월을 추출했을 수 있으므로 날짜 보정
       if (selectedType && MONTHLY_TYPES.includes(selectedType)) {
         rows = rows.map((row) => {
           const dateStr = String(row.date ?? "");
+          // "YYYY-MM-DD" 형식에서 일(day) 부분만 추출해 yearMonth와 합성
           const dayMatch = dateStr.match(/(\d{2})$/);
           const day = dayMatch ? dayMatch[1] : dateStr.slice(-2);
           if (day && /^\d{2}$/.test(day)) {
@@ -131,6 +134,7 @@ export default function UploadPage() {
   };
 
   const columnOrder: Record<FileType, string[]> = {
+    duty:    ["date", "regular_duty", "er_am", "er_pm", "night_duty", "is_weekend", "weekend_duty"],
     journal: ["date", "presenter", "topic", "year"],
     ngr:     ["date", "schedule_info", "person", "year"],
     dept:    ["date", "event_name", "time", "location"],
@@ -148,15 +152,18 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
         <Link href="/" className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600">
           <ChevronLeft className="w-4 h-4" />
           메인으로
         </Link>
-        <span className="text-base font-bold text-gray-900">스케쁜 파일 업로드</span>
+        <span className="text-base font-bold text-gray-900">스케쥴 파일 업로드</span>
       </div>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+
+        {/* 1. 파일 종류 선택 */}
         <section>
           <h2 className="text-sm font-semibold text-gray-700 mb-3">1. 파일 종류 선택</h2>
           <div className="space-y-2">
@@ -186,6 +193,7 @@ export default function UploadPage() {
           </div>
         </section>
 
+        {/* 1-1. 년월 선택 (월별 업로드 타입에만 표시) */}
         {selectedType && MONTHLY_TYPES.includes(selectedType) && (
           <section>
             <h2 className="text-sm font-semibold text-gray-700 mb-3">
@@ -202,6 +210,7 @@ export default function UploadPage() {
           </section>
         )}
 
+        {/* 2. 파일 업로드 */}
         <section>
           <h2 className="text-sm font-semibold text-gray-700 mb-3">2. 파일 업로드</h2>
           <div
@@ -251,6 +260,7 @@ export default function UploadPage() {
           </div>
         </section>
 
+        {/* 3. 분석 버튼 */}
         <div className="space-y-1.5">
           <Button
             variant="primary"
@@ -277,6 +287,7 @@ export default function UploadPage() {
           )}
         </div>
 
+        {/* 에러 메시지 */}
         {status === "error" && (
           <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
             <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
@@ -284,6 +295,7 @@ export default function UploadPage() {
           </div>
         )}
 
+        {/* 4. 분석 결과 테이블 */}
         {analysisData.length > 0 && selectedType && (
           <section>
             <h2 className="text-sm font-semibold text-gray-700 mb-3">
@@ -323,8 +335,15 @@ export default function UploadPage() {
           </section>
         )}
 
+        {/* 저장 버튼 */}
         {status === "analyzed" && analysisData.length > 0 && (
-          <Button variant="success" size="lg" onClick={handleSave} disabled={status !== "analyzed"} className="w-full">
+          <Button
+            variant="success"
+            size="lg"
+            onClick={handleSave}
+            disabled={status !== "analyzed"}
+            className="w-full"
+          >
             저장하기 ({analysisData.length}개 항목을 달력에 반영)
           </Button>
         )}
