@@ -114,14 +114,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API 키가 설정되지 않았습니다.' }, { status: 500 })
     }
 
-    // 순서대로 시도할 무료 비전 모델 목록 (rate limit 초과 시 다음 모델로 fallback)
-    // 표/스케쥴 이미지 인식에 강한 모델 우선
+    // 순서대로 시도할 무료 비전 모델 목록 (429/에러 시 다음 모델로 자동 fallback)
     const MODELS = [
       'google/gemini-2.0-flash-exp:free',        // 1순위: 속도+품질 균형, 한국어 우수
-      'google/gemini-2.5-pro-exp-03-25:free',    // 2순위: 최고 품질 (느릴 수 있음)
+      'google/gemini-flash-1.5:free',            // 2순위: Gemini 1.5 Flash (안정적)
       'qwen/qwen2.5-vl-72b-instruct:free',       // 3순위: 문서/표 이해 특화
-      'meta-llama/llama-4-maverick:free',        // 4순위: 멀티모달 강함
-      'google/gemma-3-27b-it:free',              // 5순위: 최후 fallback
+      'google/gemma-3-27b-it:free',              // 4순위
+      'google/gemma-3-12b-it:free',              // 5순위
+      'google/gemma-3-4b-it:free',               // 6순위: 최후 fallback
     ]
 
     const callOpenRouter = async (model: string) => {
@@ -152,45 +152,39 @@ export async function POST(request: NextRequest) {
     }
 
     let aiText = ''
-    let lastError = ''
+    const triedErrors: string[] = []
 
     for (const model of MODELS) {
-      // 429 rate limit 시 2초 대기 후 재시도 (최대 2회)
-      for (let attempt = 0; attempt < 2; attempt++) {
-        if (attempt > 0) await new Promise((r) => setTimeout(r, 2000))
+      const res = await callOpenRouter(model)
 
-        const res = await callOpenRouter(model)
-
-        if (res.ok) {
-          const json = await res.json()
-          aiText = json.choices?.[0]?.message?.content ?? ''
-          break
-        }
-
-        const errorBody = await res.text()
-        lastError = `${model} (HTTP ${res.status}): ${errorBody.slice(0, 200)}`
-
-        if (res.status === 429) {
-          // rate limit — 다음 모델로 넘어가기 전에 잠깐 대기
-          await new Promise((r) => setTimeout(r, 1500))
-          break  // 이 모델 재시도 중단, 다음 모델 시도
-        }
-
-        // 그 외 에러 (400, 500 등)는 즉시 다음 모델로
-        break
+      if (res.ok) {
+        const json = await res.json()
+        aiText = json.choices?.[0]?.message?.content ?? ''
+        if (aiText) break  // 응답이 있으면 성공
+        // ok지만 빈 응답 — 다음 모델 시도
+        triedErrors.push(`${model.split('/')[1]} (empty)`)
+        continue
       }
 
-      if (aiText) break  // 성공한 모델이 있으면 중단
+      const errorBody = await res.text()
+      triedErrors.push(`${model.split('/')[1]} (${res.status})`)
+      console.error(`모델 실패 [${model}] HTTP ${res.status}:`, errorBody.slice(0, 300))
+
+      // 429: 잠깐 대기 후 다음 모델, 그 외: 즉시 다음 모델
+      if (res.status === 429) {
+        await new Promise((r) => setTimeout(r, 1000))
+      }
     }
 
     if (!aiText) {
-      console.error('모든 모델 실패:', lastError)
-      const isRateLimit = lastError.includes('429')
+      const triedList = triedErrors.join(', ')
+      console.error('모든 모델 실패:', triedList)
+      const allRateLimit = triedErrors.every(e => e.includes('429'))
       return NextResponse.json(
         {
-          error: isRateLimit
-            ? '무료 AI 모델의 요청 한도에 도달했습니다. 잠시 후 다시 시도해 주세요. (약 1분 후)'
-            : `AI 분석 실패: ${lastError}`,
+          error: allRateLimit
+            ? `무료 AI 모델 요청 한도 초과 (시도: ${triedList}). 잠시 후 다시 시도해 주세요.`
+            : `AI 분석 실패 — 시도한 모델: ${triedList}. 잠시 후 다시 시도해 주세요.`,
         },
         { status: 502 }
       )
