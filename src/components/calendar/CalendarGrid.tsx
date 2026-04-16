@@ -113,18 +113,26 @@ function Row({
   weekDays,
   isEditMode,
   renderCell,
+  bordered,
+  isFirstBordered,
 }: {
   label: string;
   labelColor?: string;
   weekDays: WeekDayInfo[];
   isEditMode: boolean;
   renderCell: (d: WeekDayInfo) => ReactNode;
+  bordered?: boolean;
+  isFirstBordered?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[32px_repeat(7,1fr)] md:grid-cols-[48px_repeat(7,1fr)] border-t border-gray-100">
+    <div className={clsx(
+      "grid grid-cols-[32px_repeat(7,1fr)] md:grid-cols-[48px_repeat(7,1fr)]",
+      bordered ? (!isFirstBordered && "border-t border-gray-200") : "border-t border-gray-100"
+    )}>
       {/* 라벨 열 */}
       <div className={clsx(
-        "flex items-center justify-center px-0.5 border-r border-gray-100",
+        "flex items-center justify-center px-0.5",
+        bordered ? "border-r border-gray-300" : "border-r border-gray-100",
         isEditMode ? "bg-blue-50" : "bg-gray-50"
       )}>
         <span className={clsx(
@@ -135,12 +143,13 @@ function Row({
         </span>
       </div>
       {/* 7 요일 셀 */}
-      {weekDays.map((d) => (
+      {weekDays.map((d, idx) => (
         <div
           key={d.dateKey}
           className={clsx(
             "px-0.5 py-px min-h-[22px] md:min-h-[26px]",
             !d.calendarDay.isCurrentMonth && "invisible pointer-events-none",
+            bordered && idx < 6 && "border-r border-gray-200",
           )}
         >
           {d.calendarDay.isCurrentMonth && renderCell(d)}
@@ -246,8 +255,10 @@ export default function CalendarGrid(props: CalendarGridProps) {
               })}
             </div>
 
+            {/* 정규/ER/당직 섹션 — 외곽 테두리 강조 */}
+            <div className="border border-gray-400 rounded-sm">
             {/* 정규 (토요일엔 외래 교수 표시) */}
-            <Row label="정규" weekDays={weekDays} isEditMode={isEditMode}
+            <Row label="정규" bordered isFirstBordered weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 if (d.calendarDay.isSunday) return null;
                 if (d.calendarDay.isSaturday) {
@@ -274,7 +285,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
             />
 
             {/* ER↑ */}
-            <Row label="ER↑" labelColor="text-orange-500" weekDays={weekDays} isEditMode={isEditMode}
+            <Row label="ER↑" labelColor="text-orange-500" bordered weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 if (d.calendarDay.isWeekend) return null;
                 const val = resolveVal(d.editData?.er_am, d.dayData.duty?.er_am);
@@ -285,7 +296,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
             />
 
             {/* ER↓ */}
-            <Row label="ER↓" labelColor="text-amber-500" weekDays={weekDays} isEditMode={isEditMode}
+            <Row label="ER↓" labelColor="text-amber-500" bordered weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 if (d.calendarDay.isWeekend) return null;
                 const val = resolveVal(d.editData?.er_pm, d.dayData.duty?.er_pm);
@@ -296,7 +307,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
             />
 
             {/* 당직 */}
-            <Row label="당직" labelColor="text-purple-600" weekDays={weekDays} isEditMode={isEditMode}
+            <Row label="당직" labelColor="text-purple-600" bordered weekDays={weekDays} isEditMode={isEditMode}
               renderCell={(d) => {
                 const val = d.calendarDay.isWeekend
                   ? resolveVal(d.editData?.weekend_duty, d.dayData.duty?.weekend_duty)
@@ -307,6 +318,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   : val ? <span className="text-[11px] md:text-[13px] text-purple-700 font-medium block">{val}</span> : null;
               }}
             />
+            </div>
 
             {/* 저널 */}
             {(hasJournal || isEditMode) && (
