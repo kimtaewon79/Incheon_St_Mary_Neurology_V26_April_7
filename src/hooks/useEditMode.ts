@@ -15,6 +15,8 @@ const EMPTY_EDITABLE: EditableDayData = {
   weekend_duty: "",
   journal_presenter: "",
   ngr_info: "",
+  event_info: "",
+  vacation_person: "",
 };
 
 interface UseEditModeReturn {
@@ -23,7 +25,7 @@ interface UseEditModeReturn {
   editStateMap: EditStateMap; // 변경된 필드 상태 맵
   enterEditMode: () => void;
   exitEditMode: () => void;
-  saveEditMode: () => void;
+  saveEditMode: () => Promise<void>;
   setEditingCell: (dateKey: string | null) => void;
   updateField: (dateKey: string, field: keyof EditableDayData, value: string, baseData?: EditableDayData) => void;
   getEditData: (dateKey: string) => EditableDayData | undefined;
@@ -56,10 +58,10 @@ export function useEditMode(
     setEditingCellDate(null);
   }, [snapshot]);
 
-  const saveEditMode = useCallback(() => {
-    // 저장: onSave 콜백 먼저 호출 후 상태 업데이트
-    // state updater 함수 안에서 side effect(onSave 호출)를 하면 안 됨
-    onSave?.(editStateMap);
+  const saveEditMode = useCallback(async () => {
+    // 저장: onSave 콜백을 await — 성공 시에만 편집 모드 종료
+    // 실패 시 예외가 전파되므로 편집 상태를 유지한다
+    await onSave?.(editStateMap);
     setSnapshot({ ...editStateMap });
     setIsEditMode(false);
     setEditingCellDate(null);

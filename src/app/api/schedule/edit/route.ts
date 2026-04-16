@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
     const dutyRows: Record<string, unknown>[] = []
     const journalRows: Record<string, unknown>[] = []
     const ngrRows: Record<string, unknown>[] = []
+    const vacationRows: Record<string, unknown>[] = []
+    const vacationDeletes: string[] = []
+    const eventUpdates: { date: string; yearMonth: string; events: string[] }[] = []
 
     for (const [date, data] of Object.entries(edits)) {
       const yearMonth = date.slice(0, 7) // "YYYY-MM"
@@ -68,9 +71,30 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
       }
+
+      // 휴가
+      if (data.vacation_person !== undefined) {
+        const person = data.vacation_person.trim()
+        if (person) {
+          vacationRows.push({
+            date,
+            person,
+            year_month: yearMonth,
+            updated_at: new Date().toISOString(),
+          })
+        } else {
+          vacationDeletes.push(date)
+        }
+      }
+
+      // 의국 일정: "/" 구분으로 복수 이벤트 저장
+      if (data.event_info !== undefined) {
+        const events = data.event_info.split('/').map((s: string) => s.trim()).filter(Boolean)
+        eventUpdates.push({ date, yearMonth, events })
+      }
     }
 
-    // 병렬 upsert
+    // 당직/저널/NGR 병렬 upsert
     const promises = []
     if (dutyRows.length > 0) {
       promises.push(
@@ -93,11 +117,50 @@ export async function POST(request: NextRequest) {
           .upsert(ngrRows, { onConflict: 'date' })
       )
     }
+    if (vacationRows.length > 0) {
+      promises.push(
+        supabase
+          .from('Incheon_St_Mary_Neurology_vacation')
+          .upsert(vacationRows, { onConflict: 'date' })
+      )
+    }
+    if (vacationDeletes.length > 0) {
+      promises.push(
+        supabase
+          .from('Incheon_St_Mary_Neurology_vacation')
+          .delete()
+          .in('date', vacationDeletes)
+      )
+    }
 
     const results = await Promise.all(promises)
-    const errors = results
+    const errors: string[] = results
       .map((r) => r.error?.message)
-      .filter(Boolean)
+      .filter(Boolean) as string[]
+
+    // 의국 일정: 날짜별로 기존 삭제 후 새 이벤트 삽입 (순차 처리)
+    for (const { date, yearMonth, events } of eventUpdates) {
+      const { error: delError } = await supabase
+        .from('Incheon_St_Mary_Neurology_department_event')
+        .delete()
+        .eq('date', date)
+      if (delError) errors.push(delError.message)
+
+      if (events.length > 0) {
+        const rows = events.map(eventName => ({
+          date,
+          event_name: eventName,
+          time: '',
+          location: '',
+          year_month: yearMonth,
+          updated_at: new Date().toISOString(),
+        }))
+        const { error: insError } = await supabase
+          .from('Incheon_St_Mary_Neurology_department_event')
+          .insert(rows)
+        if (insError) errors.push(insError.message)
+      }
+    }
 
     if (errors.length > 0) {
       return NextResponse.json({ error: errors.join(', ') }, { status: 500 })

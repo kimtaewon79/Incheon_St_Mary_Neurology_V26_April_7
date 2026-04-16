@@ -38,6 +38,12 @@ export interface DepartmentEvent {
   location?: string;
 }
 
+// 휴가 타입
+export interface VacationSchedule {
+  date: string;
+  person: string;
+}
+
 // 날짜 단위로 합쳐진 데이터 타입
 export interface DayData {
   duty?: DutySchedule;
@@ -45,6 +51,7 @@ export interface DayData {
   ngr?: IncheonNGR;
   outpatient?: OutpatientSchedule;
   department_events?: DepartmentEvent[];
+  vacation?: VacationSchedule;
 }
 
 // 달력 날짜 셀 타입
@@ -65,7 +72,9 @@ export interface EditableDayData {
   night_duty: string;
   weekend_duty: string;
   journal_presenter: string;
-  ngr_info: string;
+  ngr_info: string;    // NGR (일정 행에 통합)
+  event_info: string;  // 의국 일정 (NGR 행과 통합, "/" 구분 복수 입력)
+  vacation_person: string; // 휴가자 이름
 }
 
 // 편집 상태 맵 타입 (dateString -> EditableDayData)

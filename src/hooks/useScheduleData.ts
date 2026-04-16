@@ -9,6 +9,7 @@ import {
   IncheonNGR,
   OutpatientSchedule,
   DepartmentEvent,
+  VacationSchedule,
 } from "@/types/schedule";
 
 type ScheduleMap = Map<string, DayData>;
@@ -25,7 +26,8 @@ function buildScheduleMap(
   journal: JournalTopic[],
   ngr: IncheonNGR[],
   outpatient: OutpatientSchedule[],
-  departmentEvents: DepartmentEvent[]
+  departmentEvents: DepartmentEvent[],
+  vacation: VacationSchedule[]
 ): ScheduleMap {
   const map = new Map<string, DayData>();
 
@@ -41,8 +43,10 @@ function buildScheduleMap(
   // 의국 일정: 같은 날짜에 여러 개 가능
   departmentEvents.forEach((e) => {
     const day = getOrCreate(e.date);
-    day.department_events = [...(day.department_events ?? []), e];
+    if (!day.department_events) day.department_events = [];
+    day.department_events.push(e);
   });
+  vacation.forEach((v) => { getOrCreate(v.date).vacation = v; });
 
   return map;
 }
@@ -63,7 +67,7 @@ export function useScheduleData(year: number, month: number): UseScheduleDataRet
       if (!res.ok) throw new Error(`데이터 조회 실패: ${res.status}`);
       const json = await res.json();
       setScheduleMap(
-        buildScheduleMap(json.duty, json.journal, json.ngr, json.outpatient, json.department_events ?? [])
+        buildScheduleMap(json.duty, json.journal, json.ngr, json.outpatient, json.department_events ?? [], json.vacation ?? [])
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "알 수 없는 오류");
@@ -135,13 +139,23 @@ export function useScheduleData(year: number, month: number): UseScheduleDataRet
         },
         () => fetchData()
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "Incheon_St_Mary_Neurology_vacation",
+          filter: `date=gte.${startDate}`,
+        },
+        () => fetchData()
+      )
       .subscribe((status) => {
         realtimeConnected.current = status === "SUBSCRIBED";
       });
 
-    // 폴링 fallback: Realtime 미연결 시 30초마다 재조회
+    // 폴링 fallback: Realtime 미연결 + 탭이 visible 상태일 때만 30초마다 재조회
     const pollInterval = setInterval(() => {
-      if (!realtimeConnected.current) fetchData();
+      if (!realtimeConnected.current && document.visibilityState === "visible") fetchData();
     }, 30_000);
 
     // 필터 경고 방지용 (endDate 참조)

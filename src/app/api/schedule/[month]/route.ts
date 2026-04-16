@@ -18,8 +18,8 @@ export async function GET(
     const lastDay = new Date(year, mon, 0).getDate()
     const endDate = `${month}-${String(lastDay).padStart(2, '0')}`
 
-    // 5개 테이블 병렬 조회
-    const [dutyResult, journalResult, ngrResult, outpatientResult, deptResult] = await Promise.all([
+    // 6개 테이블 병렬 조회
+    const [dutyResult, journalResult, ngrResult, outpatientResult, deptResult, vacationResult] = await Promise.all([
       supabase
         .from('Incheon_St_Mary_Neurology_duty_schedule')
         .select('*')
@@ -50,10 +50,16 @@ export async function GET(
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date'),
+      supabase
+        .from('Incheon_St_Mary_Neurology_vacation')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date'),
     ])
 
     // 에러 확인
-    const errors = [dutyResult, journalResult, ngrResult, outpatientResult, deptResult]
+    const errors = [dutyResult, journalResult, ngrResult, outpatientResult, deptResult, vacationResult]
       .map((r) => r.error?.message)
       .filter(Boolean)
     if (errors.length > 0) {
@@ -66,6 +72,7 @@ export async function GET(
       ngr: ngrResult.data ?? [],
       outpatient: outpatientResult.data ?? [],
       department_events: deptResult.data ?? [],
+      vacation: vacationResult.data ?? [],
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류'

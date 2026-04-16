@@ -11,7 +11,6 @@ import CalendarHeader from "@/components/calendar/CalendarHeader";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
 import { CalendarSkeleton } from "@/components/ui/LoadingSkeleton";
 import { DayData, EditableDayData } from "@/types/schedule";
-import { formatDateKey } from "@/lib/calendar";
 
 export default function HomePage() {
   const { year, month, calendarDays, goToPrevMonth, goToNextMonth, goToToday } =
@@ -76,7 +75,7 @@ export default function HomePage() {
 
   // DayData에서 EditableDayData 형태의 초기값을 생성
   const buildBaseEditData = (dayData: DayData): EditableDayData => {
-    const { duty, journal, ngr } = dayData;
+    const { duty, journal, ngr, vacation } = dayData;
     return {
       regular_duty: duty?.regular_duty ?? "",
       er_am: duty?.er_am ?? "",
@@ -85,6 +84,8 @@ export default function HomePage() {
       weekend_duty: duty?.weekend_duty ?? "",
       journal_presenter: journal?.presenter ?? "",
       ngr_info: ngr && (ngr.schedule_info || ngr.person) ? `${ngr.schedule_info} - ${ngr.person}` : "",
+      event_info: (dayData.department_events ?? []).map(e => e.event_name).join(" / "),
+      vacation_person: vacation?.person ?? "",
     };
   };
 
@@ -94,14 +95,10 @@ export default function HomePage() {
     updateField(dateKey, field, value, baseData);
   };
 
-  // 편집 저장 시 Supabase 저장 포함
+  // 편집 저장 시 Supabase 저장 포함 — saveEditMode가 Promise를 반환하므로 void로 처리
   const handleSave = () => {
-    saveEditMode();
+    void saveEditMode();
   };
-
-  // 오늘 날짜 키 (범례 아래 인원 안내에 사용)
-  const todayKey = formatDateKey(new Date());
-  void todayKey; // suppress unused warning
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -136,19 +133,26 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 토스트 알림 */}
-      {toast && (
-        <div
-          role="alert"
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all ${
-            toast.type === "success"
-              ? "bg-green-600 text-white"
-              : "bg-red-600 text-white"
-          }`}
-        >
-          {toast.msg}
-        </div>
-      )}
+      {/* 토스트 알림 — bottom 배치로 모바일 상단 노치/알림바 간섭 방지 */}
+      <div
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {toast && (
+          <div
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all animate-in fade-in slide-in-from-bottom-2 ${
+              toast.type === "success"
+                ? "bg-green-600 text-white"
+                : "bg-red-600 text-white"
+            }`}
+          >
+            {toast.msg}
+          </div>
+        )}
+      </div>
 
       {/* 달력 영역 */}
       <main id="calendar-export-area" className="max-w-screen-xl mx-auto px-1 md:px-4 py-2 md:py-4">
@@ -220,6 +224,7 @@ export default function HomePage() {
           <LegendItem color="bg-gray-100 text-gray-600" label="주말 통합 당직" />
           <LegendItem color="bg-indigo-100 text-indigo-700" label="의국 일정" />
           <LegendItem color="bg-rose-100 text-rose-700" label="토요일 외래" />
+          <LegendItem color="bg-pink-200 text-pink-800" label="휴가" />
         </div>
 
         {/* 데이터 없을 때 안내 */}
