@@ -239,7 +239,7 @@ export default function HomePage() {
         )}
 
         <div data-print-hide className="mt-3 md:mt-4 px-1 pb-4">
-          <p className="text-[10px] md:text-xs text-gray-400">
+          <p className="text-xs md:text-sm text-gray-400">
             R1: 이동현 · R2: 양은진 · R3: 황일중 · R4: 정희섭 · Int: 김인호
           </p>
         </div>
@@ -251,7 +251,7 @@ export default function HomePage() {
 function LegendItem({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-1">
-      <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-medium ${color}`}>
+      <span className={`inline-block text-xs px-1.5 py-0.5 rounded font-medium ${color}`}>
         {label}
       </span>
     </div>

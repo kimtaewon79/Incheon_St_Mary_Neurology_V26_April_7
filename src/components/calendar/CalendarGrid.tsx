@@ -100,7 +100,7 @@ function EditInput({ value, onChange, placeholder, dateKey, field }: {
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
-      className="w-full text-[9px] md:text-xs bg-white border border-blue-200 rounded px-0.5 py-px
+      className="w-full text-[11px] md:text-sm bg-white border border-blue-200 rounded px-0.5 py-px
                  focus:outline-none focus:border-blue-500 text-gray-800 placeholder:text-gray-300"
     />
   );
@@ -128,7 +128,7 @@ function Row({
         isEditMode ? "bg-blue-50" : "bg-gray-50"
       )}>
         <span className={clsx(
-          "text-[8px] md:text-[10px] font-semibold leading-tight text-center",
+          "text-[10px] md:text-xs font-semibold leading-tight text-center",
           labelColor ?? "text-gray-500"
         )}>
           {label}
@@ -139,7 +139,7 @@ function Row({
         <div
           key={d.dateKey}
           className={clsx(
-            "px-0.5 py-px min-h-[18px] md:min-h-[22px]",
+            "px-0.5 py-px min-h-[22px] md:min-h-[26px]",
             !d.calendarDay.isCurrentMonth && "invisible pointer-events-none",
           )}
         >
@@ -166,7 +166,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
         <div />
         {DAY_LABELS.map((day, idx) => (
           <div key={day} className={clsx(
-            "text-center text-xs md:text-sm font-semibold py-1",
+            "text-center text-sm md:text-base font-semibold py-1",
             idx === 0 && "text-red-500",
             idx === 6 && "text-blue-500",
             idx > 0 && idx < 6 && "text-gray-500"
@@ -223,7 +223,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                     isToday && isCurrentMonth && "bg-red-100 ring-2 ring-red-400 ring-inset",
                   )}>
                     <span className={clsx(
-                      "text-xs md:text-sm font-bold",
+                      "text-sm md:text-base font-bold",
                       isSunday && "text-red-500",
                       isSaturday && "text-blue-500",
                       !isSunday && !isSaturday && "text-gray-700",
@@ -261,15 +261,15 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   if (!regularVal && profs.length === 0) return null;
                   return (
                     <>
-                      {regularVal && <span className="text-[9px] md:text-[11px] text-gray-800 font-medium block">{regularVal}</span>}
-                      {profs.map(n => <span key={n} className="text-[9px] md:text-[11px] text-rose-700 font-medium block">{n}</span>)}
+                      {regularVal && <span className="text-[11px] md:text-[13px] text-gray-800 font-medium block">{regularVal}</span>}
+                      {profs.map(n => <span key={n} className="text-[11px] md:text-[13px] text-rose-700 font-medium block">{n}</span>)}
                     </>
                   );
                 }
                 const val = resolveVal(d.editData?.regular_duty, d.dayData.duty?.regular_duty);
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "regular_duty", v)} placeholder="담당자" dateKey={d.dateKey} field="regular_duty" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-gray-800 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[11px] md:text-[13px] text-gray-800 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -280,7 +280,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 const val = resolveVal(d.editData?.er_am, d.dayData.duty?.er_am);
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_am", v)} placeholder="담당자" dateKey={d.dateKey} field="er_am" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-orange-700 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[11px] md:text-[13px] text-orange-700 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -291,7 +291,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 const val = resolveVal(d.editData?.er_pm, d.dayData.duty?.er_pm);
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "er_pm", v)} placeholder="담당자" dateKey={d.dateKey} field="er_pm" />
-                  : val ? <span className="text-[9px] md:text-[11px] text-amber-700 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[11px] md:text-[13px] text-amber-700 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -304,7 +304,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                 const field: keyof EditableDayData = d.calendarDay.isWeekend ? "weekend_duty" : "night_duty";
                 return isEditMode
                   ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, field, v)} placeholder="담당자" dateKey={d.dateKey} field={field} />
-                  : val ? <span className="text-[9px] md:text-[11px] text-purple-700 font-medium block">{val}</span> : null;
+                  : val ? <span className="text-[11px] md:text-[13px] text-purple-700 font-medium block">{val}</span> : null;
               }}
             />
 
@@ -316,7 +316,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   const val = resolveVal(d.editData?.journal_presenter, d.dayData.journal?.presenter);
                   return isEditMode
                     ? <EditInput value={val} onChange={(v) => onFieldChange(d.dateKey, "journal_presenter", v)} placeholder="발표자" dateKey={d.dateKey} field="journal_presenter" />
-                    : val ? <span className="text-[9px] md:text-[11px] text-green-700 font-medium block">{val}</span> : null;
+                    : val ? <span className="text-[11px] md:text-[13px] text-green-700 font-medium block">{val}</span> : null;
                 }}
               />
             )}
@@ -342,7 +342,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   }
                   const combined = [ngrVal, eventVal].filter(Boolean).join(" / ");
                   return combined
-                    ? <span className="text-[9px] md:text-[11px] text-indigo-700 font-medium block truncate">{combined}</span>
+                    ? <span className="text-[11px] md:text-[13px] text-indigo-700 font-medium block truncate">{combined}</span>
                     : null;
                 }}
               />
@@ -356,14 +356,14 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   "flex items-center justify-center px-0.5 border-r border-gray-100",
                   isEditMode ? "bg-blue-50" : "bg-gray-50"
                 )}>
-                  <span className="text-[8px] md:text-[10px] font-semibold leading-tight text-center text-pink-600">
+                  <span className="text-[10px] md:text-xs font-semibold leading-tight text-center text-pink-600">
                     휴가
                   </span>
                 </div>
                 {/* 7 요일 셀 — 휴가자 있으면 셀 전체 배경색 */}
                 {weekDays.map((d) => {
                   if (!d.calendarDay.isCurrentMonth) {
-                    return <div key={d.dateKey} className="invisible pointer-events-none min-h-[18px] md:min-h-[22px]" />;
+                    return <div key={d.dateKey} className="invisible pointer-events-none min-h-[22px] md:min-h-[26px]" />;
                   }
                   const val = resolveVal(d.editData?.vacation_person, d.dayData.vacation?.person);
                   const color = val ? getVacationColor(val) : null;
@@ -373,7 +373,7 @@ export default function CalendarGrid(props: CalendarGridProps) {
                       <div
                         key={d.dateKey}
                         className={clsx(
-                          "px-0.5 py-px min-h-[18px] md:min-h-[22px]",
+                          "px-0.5 py-px min-h-[22px] md:min-h-[26px]",
                           val && color && color.bg
                         )}
                       >
@@ -392,12 +392,12 @@ export default function CalendarGrid(props: CalendarGridProps) {
                     <div
                       key={d.dateKey}
                       className={clsx(
-                        "px-0.5 py-px min-h-[18px] md:min-h-[22px] flex items-center justify-center",
+                        "px-0.5 py-px min-h-[22px] md:min-h-[26px] flex items-center justify-center",
                         val && color && color.bg
                       )}
                     >
                       {val && color && (
-                        <span className={clsx("text-[9px] md:text-[11px] font-bold block text-center", color.text)}>
+                        <span className={clsx("text-[11px] md:text-[13px] font-bold block text-center", color.text)}>
                           {val}
                         </span>
                       )}
