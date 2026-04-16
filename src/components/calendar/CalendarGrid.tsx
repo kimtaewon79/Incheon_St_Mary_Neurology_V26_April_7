@@ -220,10 +220,11 @@ export default function CalendarGrid(props: CalendarGridProps) {
         return (
           <div key={weekIdx} className="border border-gray-200 rounded overflow-hidden">
 
-            {/* 날짜 번호 행 */}
-            <div className="grid grid-cols-[32px_repeat(7,1fr)] md:grid-cols-[48px_repeat(7,1fr)] bg-gray-50">
-              <div className="border-r border-gray-200" />
-              {weekDays.map(({ calendarDay, dateKey, dayData }) => {
+            {/* 날짜 번호 행 — 외곽 테두리 + 연한 배경 */}
+            <div className="border border-gray-400 rounded-sm">
+            <div className="grid grid-cols-[32px_repeat(7,1fr)] md:grid-cols-[48px_repeat(7,1fr)] bg-gray-100">
+              <div className="border-r border-gray-300" />
+              {weekDays.map(({ calendarDay, dateKey, dayData }, idx) => {
                 const { date, isCurrentMonth, isToday, isSunday, isSaturday } = calendarDay;
                 const inner = (
                   <div className={clsx(
@@ -243,16 +244,23 @@ export default function CalendarGrid(props: CalendarGridProps) {
                   </div>
                 );
 
+                const cellWrapper = (child: ReactNode) => (
+                  <div key={dateKey} className={clsx(idx < 6 && "border-r border-gray-200")}>
+                    {child}
+                  </div>
+                );
+
                 // 평일·일요일 → hover 팝오버 래핑 (비편집 모드)
                 if (!isEditMode && isCurrentMonth && !isSaturday) {
-                  return (
+                  return cellWrapper(
                     <OutpatientPopover key={dateKey} date={date} outpatient={dayData.outpatient}>
                       {inner}
                     </OutpatientPopover>
                   );
                 }
-                return <div key={dateKey}>{inner}</div>;
+                return cellWrapper(inner);
               })}
+            </div>
             </div>
 
             {/* 정규/ER/당직 섹션 — 외곽 테두리 강조 */}
