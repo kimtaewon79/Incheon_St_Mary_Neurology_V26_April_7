@@ -105,13 +105,23 @@ export async function POST(request: NextRequest) {
     }
 
     const sanitize = SANITIZERS[type]
-    const rows = data
+    const rawRows = data
       .map(sanitize)
       .filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(String(r.date))) // 날짜 형식 검증
 
-    if (rows.length === 0) {
+    if (rawRows.length === 0) {
       return NextResponse.json({ error: '유효한 날짜 형식(YYYY-MM-DD)의 행이 없습니다.' }, { status: 400 })
     }
+
+    // 같은 conflict key가 배치 안에 중복되면 Postgres 에러 발생 — 뒤 항목 우선으로 중복 제거
+    const deduped = new Map<string, Record<string, unknown>>()
+    for (const row of rawRows) {
+      const key = type === 'dept'
+        ? `${row.date}__${row.event_name}`
+        : String(row.date)
+      deduped.set(key, row)
+    }
+    const rows = Array.from(deduped.values())
 
     const conflictKey = type === 'dept' ? 'date,event_name' : 'date'
     const { error } = await supabase

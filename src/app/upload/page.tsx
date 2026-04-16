@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Upload, FileText, CheckCircle, AlertCircle, Loader2, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 
-type FileType = "journal" | "ngr" | "dept";
+type FileType = "duty" | "journal" | "ngr" | "dept";
 
 // 월별 업로드 타입 (년월 지정 필요)
-const MONTHLY_TYPES: FileType[] = ["dept"];
+const MONTHLY_TYPES: FileType[] = ["duty", "dept"];
 
 function currentYearMonth() {
   const now = new Date();
@@ -17,6 +17,7 @@ function currentYearMonth() {
 }
 
 const FILE_TYPE_OPTIONS: { value: FileType; label: string; description: string }[] = [
+  { value: "duty",    label: "당직표",        description: "신경과 월별 당직 스케쥴 (정규/ER/당직)" },
   { value: "journal", label: "저널&토픽",     description: "점심 저널 클럽 발표 일정 파일 (연간)" },
   { value: "ngr",     label: "인천NGR",      description: "인천 신경과 정기 일정 파일 (연간)" },
   { value: "dept",    label: "의국 일정표",   description: "신경과 전체 의국 월별 일정표 (Epilepsy/치매/MS/Staff Lecture/NGR 등)" },
@@ -133,6 +134,7 @@ export default function UploadPage() {
   };
 
   const columnOrder: Record<FileType, string[]> = {
+    duty:    ["date", "regular_duty", "er_am", "er_pm", "night_duty", "is_weekend", "weekend_duty"],
     journal: ["date", "presenter", "topic", "year"],
     ngr:     ["date", "schedule_info", "person", "year"],
     dept:    ["date", "event_name", "time", "location"],
@@ -259,19 +261,32 @@ export default function UploadPage() {
         </section>
 
         {/* 3. 분석 버튼 */}
-        <Button
-          variant="primary"
-          size="lg"
-          disabled={!file || !selectedType || status === "analyzing" || status === "saving"}
-          onClick={handleAnalyze}
-          className="w-full"
-        >
-          {status === "analyzing" ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> AI 분석 중...</>
-          ) : (
-            <><Upload className="w-4 h-4" /> 분석 시작</>
+        <div className="space-y-1.5">
+          <Button
+            variant="primary"
+            size="lg"
+            disabled={!file || !selectedType || status === "analyzing" || status === "saving"}
+            onClick={handleAnalyze}
+            className="w-full"
+          >
+            {status === "analyzing" ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> AI 분석 중...</>
+            ) : (
+              <><Upload className="w-4 h-4" /> 분석 시작</>
+            )}
+          </Button>
+          {/* 비활성화 이유 안내 */}
+          {!selectedType && (
+            <p className="text-xs text-center text-amber-600" role="status">
+              파일 종류를 먼저 선택해주세요.
+            </p>
           )}
-        </Button>
+          {selectedType && !file && (
+            <p className="text-xs text-center text-amber-600" role="status">
+              파일을 업로드해주세요.
+            </p>
+          )}
+        </div>
 
         {/* 에러 메시지 */}
         {status === "error" && (

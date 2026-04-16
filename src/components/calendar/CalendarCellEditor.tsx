@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { EditableDayData } from "@/types/schedule";
-import { formatDateKey } from "@/lib/calendar";
-import { DutySchedule, JournalTopic, IncheonNGR } from "@/types/schedule";
+import React, { useEffect, useRef } from "react";
+import { EditableDayData, DutySchedule, JournalTopic, IncheonNGR } from "@/types/schedule";
 
 interface CalendarCellEditorProps {
   date: Date;
@@ -24,11 +22,13 @@ function FieldInput({
   value,
   onChange,
   placeholder,
+  inputRef,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -36,6 +36,7 @@ function FieldInput({
         {label}
       </label>
       <input
+        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -59,6 +60,7 @@ export default function CalendarCellEditor({
   onClose,
 }: CalendarCellEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const firstInputRef = useRef<HTMLInputElement>(null);
 
   // 초기값: editData가 있으면 그 값, 없으면 원본 데이터 값 사용
   const getValue = (
@@ -85,6 +87,22 @@ export default function CalendarCellEditor({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
+  // 에디터 마운트 시 첫 입력 필드 자동 포커스
+  useEffect(() => {
+    firstInputRef.current?.focus();
+  }, []);
+
+  // ESC 키로 편집 종료 (키보드 접근성)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       ref={containerRef}
@@ -100,6 +118,7 @@ export default function CalendarCellEditor({
             value={getValue("weekend_duty", duty?.weekend_duty)}
             onChange={(v) => onFieldChange("weekend_duty", v)}
             placeholder="담당자"
+            inputRef={firstInputRef}
           />
         ) : (
           // 평일: 각 필드 편집
@@ -109,6 +128,7 @@ export default function CalendarCellEditor({
               value={getValue("regular_duty", duty?.regular_duty)}
               onChange={(v) => onFieldChange("regular_duty", v)}
               placeholder="담당자"
+              inputRef={firstInputRef}
             />
             <FieldInput
               label="ER↑"

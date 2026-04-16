@@ -48,7 +48,7 @@ export default function Tag({ variant = "default", label, className }: TagProps)
   return (
     <span
       className={clsx(
-        "inline-block text-[10px] md:text-xs px-1 py-0.5 rounded font-medium leading-tight",
+        "inline-block text-[9px] md:text-[11px] px-1 md:px-1.5 py-0.5 rounded font-semibold leading-tight whitespace-nowrap",
         variantStyles[variant],
         className
       )}

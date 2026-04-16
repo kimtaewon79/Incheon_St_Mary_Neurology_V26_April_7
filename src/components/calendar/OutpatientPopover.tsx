@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { formatFullDate } from "@/lib/calendar";
 import { OutpatientSchedule } from "@/types/schedule";
@@ -18,6 +18,13 @@ export default function OutpatientPopover({
 }: OutpatientPopoverProps) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 언마운트 시 pending 타이머 정리 — 메모리 누수 및 setState-after-unmount 방지
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, []);
 
   const scheduleOpen = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);

@@ -59,7 +59,7 @@ page.tsx → CalendarGrid → CalendarCell
 ```
 /upload page
   → file + type ('duty'|'journal'|'ngr'|'dept')
-  → POST /api/analyze   (OpenRouter google/gemma-3-12b-it:free + 4 fallback free vision models)
+  → POST /api/analyze   (OpenRouter gemini-2.0-flash-exp:free + 4 fallback free vision models)
   → editable result table
   → POST /api/schedule/save  (upsert on conflict)
   → redirect to /
@@ -129,4 +129,4 @@ Uses `window.print()` with `@media print` CSS in `globals.css`. Elements marked 
 - Personnel codes: `R1`=이동현, `R2`=양은진, `R3`=황일중, `R4`=정희섭, `Int`=김인호
 - Professor names in duty entries may include `pf.` suffix (e.g. `김태원pf.`)
 - `ngr_info` in EditableDayData encodes `"schedule_info - person"` — the edit API splits on ` - `
-- OpenRouter fallback model order: `gemma-3-12b-it:free` → `gemma-3-27b-it:free` → `qwen3.6-plus:free` → `nemotron-nano-12b-v2-vl:free` → `gemma-3-4b-it:free`
+- OpenRouter fallback model order: `gemini-2.0-flash-exp:free` → `gemini-2.5-pro-exp-03-25:free` → `qwen2.5-vl-72b-instruct:free` → `llama-4-maverick:free` → `gemma-3-27b-it:free`

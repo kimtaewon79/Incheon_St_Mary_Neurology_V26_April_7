@@ -6,31 +6,55 @@ type PromptFn = (yearMonth?: string) => string
 
 const PROMPTS: Record<ScheduleType, PromptFn> = {
   duty: (yearMonth) => {
+    const ym = yearMonth ?? 'YYYY-MM'
     const ctx = yearMonth
       ? `이 이미지는 ${yearMonth} 신경과 당직표입니다. 모든 날짜는 반드시 ${yearMonth.slice(0,4)}년 ${String(Number(yearMonth.slice(5,7)))}월로 표기하세요.`
       : '이 이미지는 신경과 당직표입니다.'
-    return `${ctx} 날짜별로 정규, ER am, ER pm, 당직 담당자를 추출해주세요.
-R1은 레지던트1년차, R2/R3/R4는 각 연차, int는 인턴, pf.가 붙으면 교수님입니다.
-주말(토/일)은 weekend_duty 필드 하나로 통합됩니다.
-다음 JSON 배열로만 응답하세요 (설명 없이):
-[{"date": "${yearMonth ?? 'YYYY-MM'}-DD", "regular_duty": "", "er_am": "", "er_pm": "", "night_duty": "", "is_weekend": false, "weekend_duty": "", "year_month": "${yearMonth ?? 'YYYY-MM'}"}]`
+    return `${ctx}
+
+표를 행(row)별로 꼼꼼히 읽어 날짜별 담당자를 추출하세요.
+- R1·R2·R3·R4: 레지던트 1~4년차 / int: 인턴 / pf. 포함 이름: 교수
+- 평일: regular_duty(정규), er_am(ER오전), er_pm(ER오후), night_duty(야간당직)
+- 토/일: weekend_duty 하나로 통합, is_weekend: true
+- 담당자가 없는 칸은 빈 문자열("")로 두세요.
+- 날짜를 절대 누락하거나 혼동하지 마세요.
+
+JSON 배열로만 응답하세요 (마크다운·설명 없이):
+[{"date":"${ym}-DD","regular_duty":"","er_am":"","er_pm":"","night_duty":"","is_weekend":false,"weekend_duty":"","year_month":"${ym}"}]`
   },
 
-  journal: () => `이 이미지는 점심 저널&토픽 일정표입니다. 날짜별 발표자를 JSON 배열로만 추출하세요 (설명 없이):
-[{"date": "YYYY-MM-DD", "presenter": "", "topic": "", "year": YYYY}]`,
+  journal: () => `이 이미지는 점심 저널&토픽 일정표입니다.
 
-  ngr: () => `이 이미지는 인천NGR 일정표입니다. 날짜별 일정과 담당자를 JSON 배열로만 추출하세요 (설명 없이):
-[{"date": "YYYY-MM-DD", "schedule_info": "", "person": "", "year": YYYY}]`,
+표를 행별로 꼼꼼히 읽어 날짜·발표자·주제를 추출하세요.
+- 날짜 형식: YYYY-MM-DD
+- 발표자가 없는 날은 포함하지 마세요.
+
+JSON 배열로만 응답하세요 (마크다운·설명 없이):
+[{"date":"YYYY-MM-DD","presenter":"","topic":"","year":YYYY}]`,
+
+  ngr: () => `이 이미지는 인천NGR 일정표입니다.
+
+표를 행별로 꼼꼼히 읽어 날짜·일정명·담당자를 추출하세요.
+- 날짜 형식: YYYY-MM-DD
+- 일정이 없는 날은 포함하지 마세요.
+
+JSON 배열로만 응답하세요 (마크다운·설명 없이):
+[{"date":"YYYY-MM-DD","schedule_info":"","person":"","year":YYYY}]`,
 
   dept: (yearMonth) => {
+    const ym = yearMonth ?? 'YYYY-MM'
     const ctx = yearMonth
       ? `이 이미지는 ${yearMonth} 신경과 의국 월별 일정표입니다. 모든 날짜는 반드시 ${yearMonth.slice(0,4)}년 ${String(Number(yearMonth.slice(5,7)))}월로 표기하세요.`
       : '이 이미지는 신경과 의국 월별 일정표입니다.'
-    return `${ctx} 달력과 하단 목록에서 모든 일정을 추출하세요.
-일정 종류 예시: Epilepsy Conference, 치매집담회, MS & Peripheral Conference, Staff Lecture, NGR 등.
-하단 상세 목록에 날짜와 시간 정보가 있으면 우선 사용하세요.
-다음 JSON 배열로만 응답하세요 (설명 없이):
-[{"date": "${yearMonth ?? 'YYYY-MM'}-DD", "event_name": "", "time": "HH:MM", "location": ""}]`
+    return `${ctx}
+
+달력 칸과 하단 상세 목록을 모두 읽어 모든 일정을 빠짐없이 추출하세요.
+- 일정 예시: Epilepsy Conference, 치매집담회, MS & Peripheral Conference, Staff Lecture, NGR 등
+- 하단 목록에 시간·장소가 있으면 우선 사용하세요.
+- 같은 날 일정이 여러 개면 각각 별도 객체로 추가하세요.
+
+JSON 배열로만 응답하세요 (마크다운·설명 없이):
+[{"date":"${ym}-DD","event_name":"","time":"HH:MM","location":""}]`
   },
 }
 
@@ -92,14 +116,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API 키가 설정되지 않았습니다.' }, { status: 500 })
     }
 
-    // 순서대로 시도할 무료 비전 모델 목록 (rate limit 초과 시 다음 모델로 fallback)
-    // OpenRouter /api/v1/models 에서 확인된 실제 무료 이미지 지원 모델
+    // 순서대로 시도할 무료 비전 모델 목록 (429/에러 시 다음 모델로 자동 fallback)
     const MODELS = [
-      'google/gemma-3-12b-it:free',
-      'google/gemma-3-27b-it:free',
-      'qwen/qwen3.6-plus:free',
-      'nvidia/nemotron-nano-12b-v2-vl:free',
-      'google/gemma-3-4b-it:free',
+      'google/gemini-2.0-flash-exp:free',        // 1순위: 속도+품질 균형, 한국어 우수
+      'google/gemini-flash-1.5:free',            // 2순위: Gemini 1.5 Flash (안정적)
+      'qwen/qwen2.5-vl-72b-instruct:free',       // 3순위: 문서/표 이해 특화
+      'google/gemma-3-27b-it:free',              // 4순위
+      'google/gemma-3-12b-it:free',              // 5순위
+      'google/gemma-3-4b-it:free',               // 6순위: 최후 fallback
     ]
 
     const callOpenRouter = async (model: string) => {
@@ -130,45 +154,39 @@ export async function POST(request: NextRequest) {
     }
 
     let aiText = ''
-    let lastError = ''
+    const triedErrors: string[] = []
 
     for (const model of MODELS) {
-      // 429 rate limit 시 2초 대기 후 재시도 (최대 2회)
-      for (let attempt = 0; attempt < 2; attempt++) {
-        if (attempt > 0) await new Promise((r) => setTimeout(r, 2000))
+      const res = await callOpenRouter(model)
 
-        const res = await callOpenRouter(model)
-
-        if (res.ok) {
-          const json = await res.json()
-          aiText = json.choices?.[0]?.message?.content ?? ''
-          break
-        }
-
-        const errorBody = await res.text()
-        lastError = `${model} (HTTP ${res.status}): ${errorBody.slice(0, 200)}`
-
-        if (res.status === 429) {
-          // rate limit — 다음 모델로 넘어가기 전에 잠깐 대기
-          await new Promise((r) => setTimeout(r, 1500))
-          break  // 이 모델 재시도 중단, 다음 모델 시도
-        }
-
-        // 그 외 에러 (400, 500 등)는 즉시 다음 모델로
-        break
+      if (res.ok) {
+        const json = await res.json()
+        aiText = json.choices?.[0]?.message?.content ?? ''
+        if (aiText) break  // 응답이 있으면 성공
+        // ok지만 빈 응답 — 다음 모델 시도
+        triedErrors.push(`${model.split('/')[1]} (empty)`)
+        continue
       }
 
-      if (aiText) break  // 성공한 모델이 있으면 중단
+      const errorBody = await res.text()
+      triedErrors.push(`${model.split('/')[1]} (${res.status})`)
+      console.error(`모델 실패 [${model}] HTTP ${res.status}:`, errorBody.slice(0, 300))
+
+      // 429: 잠깐 대기 후 다음 모델, 그 외: 즉시 다음 모델
+      if (res.status === 429) {
+        await new Promise((r) => setTimeout(r, 1000))
+      }
     }
 
     if (!aiText) {
-      console.error('모든 모델 실패:', lastError)
-      const isRateLimit = lastError.includes('429')
+      const triedList = triedErrors.join(', ')
+      console.error('모든 모델 실패:', triedList)
+      const allRateLimit = triedErrors.every(e => e.includes('429'))
       return NextResponse.json(
         {
-          error: isRateLimit
-            ? '무료 AI 모델의 요청 한도에 도달했습니다. 잠시 후 다시 시도해 주세요. (약 1분 후)'
-            : `AI 분석 실패: ${lastError}`,
+          error: allRateLimit
+            ? `무료 AI 모델 요청 한도 초과 (시도: ${triedList}). 잠시 후 다시 시도해 주세요.`
+            : `AI 분석 실패 — 시도한 모델: ${triedList}. 잠시 후 다시 시도해 주세요.`,
         },
         { status: 502 }
       )

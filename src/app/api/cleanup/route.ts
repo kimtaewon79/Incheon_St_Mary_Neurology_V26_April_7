@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+// outpatient 테이블은 제외 — 토요일 외래 데이터가 미리 수동 입력되어 있어 삭제하면 안 됨
 const TABLES = [
   "Incheon_St_Mary_Neurology_duty_schedule",
   "Incheon_St_Mary_Neurology_journal_topic",
   "Incheon_St_Mary_Neurology_incheon_ngr",
   "Incheon_St_Mary_Neurology_department_event",
-  "Incheon_St_Mary_Neurology_outpatient",
 ];
 
 // 현재 달 기준 전달 1일 ~ 다음달 말일 범위 계산
