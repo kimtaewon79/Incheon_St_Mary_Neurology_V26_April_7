@@ -29,28 +29,36 @@ NEXT_PUBLIC_APP_URL=
 ### Data Flow (read → display)
 
 ```
-Supabase (5 tables)
-  ↓  GET /api/schedule/[month]   (parallel query of all 5 tables)
+Supabase (6 tables)
+  ↓  GET /api/schedule/[month]   (parallel query of all 6 tables)
 useScheduleData(year, month)
   → scheduleMap: Map<"YYYY-MM-DD", DayData>  ← O(1) per cell
-  → Supabase Realtime subscription on all 5 tables (30s poll fallback)
+  → Supabase Realtime subscription on all 6 tables (30s poll fallback)
   ↓
-page.tsx → CalendarGrid → CalendarCell
-  → tags rendered from DayData.duty / .journal / .ngr / .department_events[]
-  → hover → OutpatientPopover (DayData.outpatient: am_professors[], pm_professors[])
+page.tsx → CalendarGrid (horizontal weekly layout: rows = categories, cols = days)
+  → Row components for 정규 / ER↑ / ER↓ / 당직 / 저널 / 일정 / 휴가
+  → Saturday "정규" row also lists fetched outpatient AM professors
+  → hover (non-Saturday) → OutpatientPopover (am_professors[], pm_professors[])
+  → today highlight: per-week absolute overlay grid draws a column-wide red border
 ```
+
+`CalendarCell.tsx` exists in the tree but is **not** imported by `page.tsx` — actual rendering is `CalendarGrid.tsx` only.
 
 ### Edit Flow (edit → save → sync)
 
 ```
 "수정" button → useEditMode (local EditStateMap)
-  → cell click → CalendarCellEditor (inline inputs)
+  → 셀 클릭 → CalendarGrid의 EditInput inline (주중) /
+              CalendarCellEditor 팝업 (주말 — 토요일은 외래 AM/PM 입력 포함)
   → "저장" → onSave callback
       ↓  POST /api/schedule/edit
-      distributes EditableDayData fields to correct tables:
+      distributes EditableDayData fields to tables:
         regular_duty / er_am / er_pm / night_duty / weekend_duty → duty_schedule
         journal_presenter                                         → journal_topic
-        ngr_info ("info - person")                               → incheon_ngr
+        ngr_info ("info - person")                                → incheon_ngr
+        event_info ("/" 구분)                                     → department_event (date,event_name 복합 키)
+        vacation_person                                           → vacation
+        outpatient_am / outpatient_pm (쉼표 구분)                 → outpatient (토요일 수동 편집 경로)
       ↓ Supabase Realtime notifies all connected clients → refetch()
 ```
 
@@ -80,10 +88,15 @@ All table names are prefixed `Incheon_St_Mary_Neurology_` (project: `urfitrbofur
 | `duty_schedule` | date, regular_duty, er_am, er_pm, night_duty, is_weekend, weekend_duty | `date` | Monthly upload |
 | `journal_topic` | date, presenter, topic, year | `date` | Annual upload |
 | `incheon_ngr` | date, schedule_info, person, year | `date` | Annual upload |
-| `outpatient` | date, am_professors TEXT[], pm_professors TEXT[], fetched_at | `date` | Daily cron |
+| `outpatient` | date, am_professors TEXT[], pm_professors TEXT[], fetched_at | `date` | Daily cron + Saturday manual edit |
 | `department_event` | date, event_name, time, location, year_month | `(date, event_name)` | Monthly upload |
+| `vacation` | date, person | `date` | Manual edit |
 
-`department_event` uses a composite unique key — same date can have multiple events. Upsert uses `onConflict: 'date,event_name'`.
+`department_event` uses a composite unique key — same date can have multiple events. Upsert uses `onConflict: 'date,event_name'`. Editing event_info to empty string deletes all events for that date.
+
+### Cleanup Retention Policy (`/api/cleanup`)
+
+Vercel Cron runs `0 0 1 * *` (월 1일 UTC 00:00). Deletes rows older than the 1st of the month **3 months back** for: `duty_schedule`, `journal_topic`, `incheon_ngr`, `department_event`, `vacation`. **Excludes `outpatient`** because future Saturday outpatient rows may be manually entered. Future-dated rows are never deleted.
 
 ### Outpatient Auto-Fetch
 
@@ -102,18 +115,37 @@ Uses `window.print()` with `@media print` CSS in `globals.css`. Elements marked 
 | `useEditMode(onSave)` | Local edit state, snapshot rollback on cancel, calls `onSave` with diff |
 | `usePdfExport` | Calls `window.print()`, manages `exporting` state |
 
-## Tag Variants & Colors
+## Color Scheme
 
-| Variant | Color | Usage |
+Two layers carry color: **Tag chips** (`Tag.tsx`, used in legend on `page.tsx`) and **CalendarGrid rows** (left labels + right cell content). Keep both in sync when editing colors.
+
+### Tag chip variants (`src/components/ui/Tag.tsx`)
+
+| Variant | bg / text | Used for |
 |---|---|---|
-| `regular` | blue | 정규 당직 |
-| `er-am` | orange | ER 오전 |
-| `er-pm` | amber | ER 오후 |
-| `night` | purple | 야간 당직 |
-| `journal` | green | 저널&토픽 |
-| `ngr` | teal | 인천NGR |
-| `weekend` | gray | 주말 통합 당직 |
-| `event` | indigo | 의국 일정 (Epilepsy/치매/MS/Staff Lecture 등) |
+| `regular` | blue-100 / gray-900 | 정규 당직 |
+| `er-am` | orange-100 / gray-900 | ER 오전 |
+| `er-pm` | amber-100 / gray-900 | ER 오후 |
+| `night` | purple-100 / gray-900 | 야간 당직 |
+| `journal` | indigo-100 / indigo-700 | 저널&토픽 (의국일정과 동일) |
+| `ngr` | teal-100 / teal-700 | 인천NGR |
+| `weekend` | gray-100 / gray-600 | 주말 통합 당직 |
+| `event` | indigo-100 / indigo-700 | 의국 일정 (Epilepsy/치매/MS/Staff Lecture 등) |
+| `outpatient` | rose-100 / rose-700 | 토요일 외래 |
+
+### CalendarGrid row colors (`src/components/calendar/CalendarGrid.tsx`)
+
+| Row | Label color | Content text color |
+|---|---|---|
+| 정규 | gray-800 | gray-900 (외래 교수는 rose-700) |
+| ER↑ / ER↓ / 당직 | gray-800 | gray-900 |
+| 저널 | indigo-600 | indigo-700 |
+| 일정 (NGR + 의국 일정 통합) | indigo-600 | indigo-700 |
+| 휴가 | pink-600 | per-person hash → `VACATION_COLORS` (셀 전체 bg + text) |
+
+### Today highlight
+
+Each weekly block computes `todayIdx = weekDays.findIndex(d => d.calendarDay.isToday && d.calendarDay.isCurrentMonth)`. If found, an `absolute inset-0 grid` overlay (matching the row grid's `[32px_repeat(7,1fr)] / [48px_repeat(7,1fr)]` columns) renders a `border-2 border-red-500 rounded-sm` div in the today column — drawing a single red rectangle around the entire column from date row to the bottom (휴가) row. The date number cell itself only adds a subtle `bg-red-50` (no ring) to avoid clashing with the overlay border.
 
 ## Next.js 16 Specifics
 
@@ -126,7 +158,10 @@ Uses `window.print()` with `@media print` CSS in `globals.css`. Elements marked 
 ## Domain Notes
 
 - `is_weekend: true` → only `weekend_duty` is shown (정규/ER fields are empty); department_events still render on weekends
+- Saturday only: `정규` row also displays auto-fetched outpatient AM professors below the manual `regular_duty` value
 - Personnel codes: `R1`=이동현, `R2`=양은진, `R3`=황일중, `R4`=정희섭, `Int`=김인호
 - Professor names in duty entries may include `pf.` suffix (e.g. `김태원pf.`)
 - `ngr_info` in EditableDayData encodes `"schedule_info - person"` — the edit API splits on ` - `
+- `event_info` encodes multiple events with `/` separator; empty string → delete all events for that date
+- `outpatient_am` / `outpatient_pm` in EditableDayData encode comma-separated professor names (Saturday cell)
 - OpenRouter fallback model order: `gemini-2.0-flash-exp:free` → `gemini-2.5-pro-exp-03-25:free` → `qwen2.5-vl-72b-instruct:free` → `llama-4-maverick:free` → `gemma-3-27b-it:free`
