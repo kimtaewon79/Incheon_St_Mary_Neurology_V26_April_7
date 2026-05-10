@@ -19,11 +19,11 @@ interface TagProps {
 }
 
 const variantStyles: Record<TagVariant, string> = {
-  regular: "bg-blue-100 text-blue-700",
-  "er-am": "bg-orange-100 text-orange-700",
-  "er-pm": "bg-amber-100 text-amber-700",
-  night: "bg-purple-100 text-purple-700",
-  journal: "bg-green-100 text-green-700",
+  regular: "bg-blue-100 text-gray-900",
+  "er-am": "bg-orange-100 text-gray-900",
+  "er-pm": "bg-amber-100 text-gray-900",
+  night: "bg-purple-100 text-gray-900",
+  journal: "bg-indigo-100 text-indigo-700",
   ngr: "bg-teal-100 text-teal-700",
   weekend: "bg-gray-100 text-gray-600",
   event: "bg-indigo-100 text-indigo-700",

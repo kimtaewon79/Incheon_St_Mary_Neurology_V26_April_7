@@ -75,7 +75,7 @@ export default function HomePage() {
 
   // DayData에서 EditableDayData 형태의 초기값을 생성
   const buildBaseEditData = (dayData: DayData): EditableDayData => {
-    const { duty, journal, ngr, vacation } = dayData;
+    const { duty, journal, ngr, vacation, outpatient } = dayData;
     return {
       regular_duty: duty?.regular_duty ?? "",
       er_am: duty?.er_am ?? "",
@@ -86,6 +86,8 @@ export default function HomePage() {
       ngr_info: ngr && (ngr.schedule_info || ngr.person) ? `${ngr.schedule_info} - ${ngr.person}` : "",
       event_info: (dayData.department_events ?? []).map(e => e.event_name).join(" / "),
       vacation_person: vacation?.person ?? "",
+      outpatient_am: (outpatient?.am_professors ?? []).join(", "),
+      outpatient_pm: (outpatient?.pm_professors ?? []).join(", "),
     };
   };
 
@@ -215,11 +217,11 @@ export default function HomePage() {
 
         {/* 범례 */}
         <div data-print-hide className="mt-4 md:mt-6 flex flex-wrap gap-2 md:gap-3 px-1">
-          <LegendItem color="bg-blue-100 text-blue-700" label="정규 당직" />
-          <LegendItem color="bg-orange-100 text-orange-700" label="ER 오전" />
-          <LegendItem color="bg-amber-100 text-amber-700" label="ER 오후" />
-          <LegendItem color="bg-purple-100 text-purple-700" label="야간 당직" />
-          <LegendItem color="bg-green-100 text-green-700" label="저널&amp;토픽" />
+          <LegendItem color="bg-blue-100 text-gray-900" label="정규 당직" />
+          <LegendItem color="bg-orange-100 text-gray-900" label="ER 오전" />
+          <LegendItem color="bg-amber-100 text-gray-900" label="ER 오후" />
+          <LegendItem color="bg-purple-100 text-gray-900" label="야간 당직" />
+          <LegendItem color="bg-indigo-100 text-indigo-700" label="저널&amp;토픽" />
           <LegendItem color="bg-teal-100 text-teal-700" label="인천NGR" />
           <LegendItem color="bg-gray-100 text-gray-600" label="주말 통합 당직" />
           <LegendItem color="bg-indigo-100 text-indigo-700" label="의국 일정" />

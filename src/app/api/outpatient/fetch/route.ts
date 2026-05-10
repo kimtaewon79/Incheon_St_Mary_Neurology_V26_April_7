@@ -16,45 +16,68 @@ interface ProfessorSchedule {
 /**
  * HTML 파싱: table.table_type01 구조
  *
- * 첫 번째 table: 날짜 헤더 행 (ex. <th>06일(월)</th>)
+ * 페이지에 명시된 "진료기간 : YYYY-MM-DD ~ YYYY-MM-DD" 를 권위 있는 날짜 출처로 사용한다.
+ * 서버 시각으로 현재 주를 추측하면 cron이 UTC 일요일 21:00(KST 월요일 06:00)에 실행될 때
+ * UTC 기준 요일(일요일)로 계산되어 1주 전 날짜에 데이터를 저장하는 버그가 있었음.
+ *
+ * 첫 번째 table: 날짜 헤더 행 (ex. <th>06일(월)</th>) — 일(day) 숫자 sanity check 용도
  * 이후 각 교수 table:
  *   thead > tr > td[colspan=7]: 교수 이름 (<span>조현지</span>)
  *   tbody > tr[0]: 오전 — <th>오전</th> + 6개 <td> (<i class="icon_won"> 있으면 진료)
  *   tbody > tr[1]: 오후 — <th>오후</th> + 6개 <td>
  */
 function parseTimetableHtml(html: string): ProfessorSchedule[] {
+  // "진료기간 : YYYY-MM-DD ~ YYYY-MM-DD" 추출 (권위 있는 출처)
+  const rangeMatch = /진료기간\s*:\s*(\d{4})-(\d{2})-(\d{2})\s*~\s*(\d{4})-(\d{2})-(\d{2})/.exec(html)
+  if (!rangeMatch) {
+    throw new Error('진료기간 헤더를 찾을 수 없습니다 — 페이지 구조가 변경되었을 가능성.')
+  }
+  const startYear = parseInt(rangeMatch[1])
+  const startMonth = parseInt(rangeMatch[2]) // 1-12
+  const startDay = parseInt(rangeMatch[3])
+
+  // 진료기간 시작일로부터 첫 월요일을 찾는다 (UTC 산술로 타임존 영향 차단)
+  let cursor = new Date(Date.UTC(startYear, startMonth - 1, startDay))
+  while (cursor.getUTCDay() !== 1) {
+    cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000)
+  }
+  // 월~토 6일치 날짜 문자열 생성
+  const weekDates: string[] = []
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(cursor.getTime() + i * 24 * 60 * 60 * 1000)
+    weekDates.push(d.toISOString().split('T')[0])
+  }
+
   // 모든 table.table_type01 추출
   const tableRe = /<table[^>]+class="table_type01[^"]*"[^>]*>([\s\S]*?)<\/table>/g
   const tables: string[] = []
   let m: RegExpExecArray | null
   while ((m = tableRe.exec(html)) !== null) tables.push(m[1])
 
-  // 첫 번째 테이블에서 날짜(YYYY-MM-DD) 목록 추출
+  // 첫 번째 테이블의 day 숫자 헤더로 sanity check (구조 깨짐 조기 감지)
   const dateStrings: string[] = []
   if (tables.length > 0) {
     const thRe = />(\d{2})일\(([월화수목금토])\)</g
     let dm: RegExpExecArray | null
+    let idx = 0
     while ((dm = thRe.exec(tables[0])) !== null) {
-      const day = parseInt(dm[1])
-      // 해당 요일의 실제 날짜를 현재 주 기준으로 계산
-      const dayIdx = DAY_NAMES.indexOf(dm[2]) // 0=월~5=토
-      const today = new Date()
-      const todayDow = today.getDay() // 0=일,1=월,...
-      const mondayOffset = todayDow === 0 ? -6 : 1 - todayDow
-      const monday = new Date(today)
-      monday.setDate(today.getDate() + mondayOffset)
-      const target = new Date(monday)
-      target.setDate(monday.getDate() + dayIdx)
-      // day 숫자가 헤더와 맞는지 확인 (월 넘어가는 경우 대비)
-      if (target.getDate() === day) {
-        dateStrings.push(target.toISOString().split('T')[0])
-      } else {
-        // 날짜가 다음달로 넘어갔을 가능성 — 페이지의 day 숫자를 신뢰
-        const year = target.getFullYear()
-        const month = String(target.getMonth() + 1).padStart(2, '0')
-        dateStrings.push(`${year}-${month}-${String(day).padStart(2, '0')}`)
+      const headerDay = parseInt(dm[1])
+      const headerDow = DAY_NAMES.indexOf(dm[2]) // 0=월~5=토
+      if (headerDow !== idx) {
+        throw new Error(`날짜 헤더 요일 순서 이상: idx=${idx}, dow=${dm[2]}`)
       }
+      if (idx >= weekDates.length) break
+      const expectedDay = parseInt(weekDates[idx].split('-')[2])
+      if (expectedDay !== headerDay) {
+        throw new Error(`진료기간(${weekDates[idx]})과 헤더 day(${headerDay}) 불일치 — 페이지 구조 확인 필요.`)
+      }
+      dateStrings.push(weekDates[idx])
+      idx++
     }
+  }
+  if (dateStrings.length === 0) {
+    // 헤더 파싱에 실패하면 진료기간만으로 fallback
+    dateStrings.push(...weekDates)
   }
 
   const professors: ProfessorSchedule[] = []

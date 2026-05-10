@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const ngrRows: Record<string, unknown>[] = []
     const vacationRows: Record<string, unknown>[] = []
     const vacationDeletes: string[] = []
+    const outpatientRows: Record<string, unknown>[] = []
     const eventUpdates: { date: string; yearMonth: string; events: string[] }[] = []
 
     for (const [date, data] of Object.entries(edits)) {
@@ -92,6 +93,20 @@ export async function POST(request: NextRequest) {
         const events = data.event_info.split('/').map((s: string) => s.trim()).filter(Boolean)
         eventUpdates.push({ date, yearMonth, events })
       }
+
+      // 토요일 외래 (쉼표 구분 문자열 → 텍스트 배열)
+      if (data.outpatient_am !== undefined || data.outpatient_pm !== undefined) {
+        const amProfs = (data.outpatient_am ?? '').split(',').map((s: string) => s.trim()).filter(Boolean)
+        const pmProfs = (data.outpatient_pm ?? '').split(',').map((s: string) => s.trim()).filter(Boolean)
+        const now = new Date().toISOString()
+        outpatientRows.push({
+          date,
+          am_professors: amProfs,
+          pm_professors: pmProfs,
+          fetched_at: now,
+          updated_at: now,
+        })
+      }
     }
 
     // 당직/저널/NGR 병렬 upsert
@@ -130,6 +145,13 @@ export async function POST(request: NextRequest) {
           .from('Incheon_St_Mary_Neurology_vacation')
           .delete()
           .in('date', vacationDeletes)
+      )
+    }
+    if (outpatientRows.length > 0) {
+      promises.push(
+        supabase
+          .from('Incheon_St_Mary_Neurology_outpatient')
+          .upsert(outpatientRows, { onConflict: 'date' })
       )
     }
 

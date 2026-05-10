@@ -17,6 +17,8 @@ const EMPTY_EDITABLE: EditableDayData = {
   ngr_info: "",
   event_info: "",
   vacation_person: "",
+  outpatient_am: "",
+  outpatient_pm: "",
 };
 
 interface UseEditModeReturn {

@@ -9,30 +9,30 @@ const TABLES = [
   "Incheon_St_Mary_Neurology_department_event",
 ];
 
-// 현재 달 기준 전달 1일 ~ 다음달 말일 범위 계산
-function getRetentionWindow(): { from: string; to: string } {
+// 유지 기준일: 현재 달 기준 3개월 전의 1일
+// 예) 2026-04 실행 → 2026-01-01 이후 데이터 유지, 그 이전 삭제
+// 미래 데이터는 삭제하지 않음
+function getRetentionStart(): string {
   const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const to = new Date(now.getFullYear(), now.getMonth() + 2, 0); // 다음달 말일
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-  return { from: fmt(from), to: fmt(to) };
+  const from = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+  return from.toISOString().split("T")[0];
 }
 
 async function runCleanup() {
-  const { from, to } = getRetentionWindow();
+  const from = getRetentionStart();
   const results: Record<string, number> = {};
 
   for (const table of TABLES) {
     const { count, error } = await supabase
       .from(table)
       .delete({ count: "exact" })
-      .or(`date.lt.${from},date.gt.${to}`);
+      .lt("date", from);
 
     if (error) throw new Error(`${table}: ${error.message}`);
     results[table] = count ?? 0;
   }
 
-  return { window: { from, to }, deleted: results };
+  return { retention_from: from, deleted: results };
 }
 
 export async function GET() {

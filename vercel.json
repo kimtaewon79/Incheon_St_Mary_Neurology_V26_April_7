@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/outpatient/fetch",
-      "schedule": "0 21 * * 0"
+      "schedule": "0 21 * * *"
     },
     {
       "path": "/api/cleanup",

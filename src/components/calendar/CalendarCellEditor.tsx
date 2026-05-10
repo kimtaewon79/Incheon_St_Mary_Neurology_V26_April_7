@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { EditableDayData, DutySchedule, JournalTopic, IncheonNGR } from "@/types/schedule";
+import { EditableDayData, DutySchedule, JournalTopic, IncheonNGR, OutpatientSchedule } from "@/types/schedule";
 
 interface CalendarCellEditorProps {
   date: Date;
@@ -10,6 +10,7 @@ interface CalendarCellEditorProps {
   duty?: DutySchedule;
   journal?: JournalTopic;
   ngr?: IncheonNGR;
+  outpatient?: OutpatientSchedule;
   // 편집 중인 값 (editStateMap에서 가져옴)
   editData?: EditableDayData;
   onFieldChange: (field: keyof EditableDayData, value: string) => void;
@@ -55,10 +56,12 @@ export default function CalendarCellEditor({
   duty,
   journal,
   ngr,
+  outpatient,
   editData,
   onFieldChange,
   onClose,
 }: CalendarCellEditorProps) {
+  const isSaturday = date.getDay() === 6;
   const containerRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -112,14 +115,32 @@ export default function CalendarCellEditor({
     >
       <div className="space-y-1">
         {isWeekend ? (
-          // 주말: 통합 당직만 편집
-          <FieldInput
-            label="당직"
-            value={getValue("weekend_duty", duty?.weekend_duty)}
-            onChange={(v) => onFieldChange("weekend_duty", v)}
-            placeholder="담당자"
-            inputRef={firstInputRef}
-          />
+          // 주말: 통합 당직 + 토요일은 오전/오후 외래까지 편집
+          <>
+            <FieldInput
+              label="당직"
+              value={getValue("weekend_duty", duty?.weekend_duty)}
+              onChange={(v) => onFieldChange("weekend_duty", v)}
+              placeholder="담당자"
+              inputRef={firstInputRef}
+            />
+            {isSaturday && (
+              <>
+                <FieldInput
+                  label="오전 외래"
+                  value={getValue("outpatient_am", (outpatient?.am_professors ?? []).join(", "))}
+                  onChange={(v) => onFieldChange("outpatient_am", v)}
+                  placeholder="쉼표로 구분"
+                />
+                <FieldInput
+                  label="오후 외래"
+                  value={getValue("outpatient_pm", (outpatient?.pm_professors ?? []).join(", "))}
+                  onChange={(v) => onFieldChange("outpatient_pm", v)}
+                  placeholder="쉼표로 구분"
+                />
+              </>
+            )}
+          </>
         ) : (
           // 평일: 각 필드 편집
           <>

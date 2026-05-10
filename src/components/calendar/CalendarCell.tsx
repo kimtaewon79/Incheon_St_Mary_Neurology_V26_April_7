@@ -35,8 +35,18 @@ export default function CalendarCell({
   onEditorClose,
 }: CalendarCellProps) {
   const { date, isCurrentMonth, isToday, isSunday, isSaturday, isWeekend } = calendarDay;
-  const { duty, journal, ngr } = dayData;
+  const { duty, journal, ngr, outpatient } = dayData;
   const dateKey = formatDateKey(date);
+
+  // 편집된 외래 값(쉼표 구분 문자열)을 배열로 변환, 없으면 원본 배열 사용
+  const parseOutpatient = (edited: string | undefined, original: string[] | undefined): string[] => {
+    if (edited !== undefined) {
+      return edited.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    return original ?? [];
+  };
+  const amProfessors = parseOutpatient(editData?.outpatient_am, outpatient?.am_professors);
+  const pmProfessors = parseOutpatient(editData?.outpatient_pm, outpatient?.pm_professors);
 
   // 셀 클릭 핸들러 (편집 모드 + 현재 달 셀에서만 작동)
   const handleCellClick = () => {
@@ -112,6 +122,7 @@ export default function CalendarCell({
           duty={duty}
           journal={journal}
           ngr={ngr}
+          outpatient={outpatient}
           editData={editData}
           onFieldChange={onFieldChange}
           onClose={onEditorClose}
@@ -130,13 +141,13 @@ export default function CalendarCell({
                   <span className="text-[9px] md:text-[13px] text-gray-700 font-medium leading-tight truncate">{weekendDuty}</span>
                 </>
               )}
-              {isSaturday && (dayData.outpatient?.am_professors ?? []).map((name) => (
+              {isSaturday && amProfessors.map((name) => (
                 <>
                   <Tag key={`am-tag-${name}`} variant="outpatient" label="오전" />
                   <span key={`am-name-${name}`} className="text-[9px] md:text-[13px] text-rose-700 font-medium leading-tight truncate">{name}</span>
                 </>
               ))}
-              {isSaturday && (dayData.outpatient?.pm_professors ?? []).map((name) => (
+              {isSaturday && pmProfessors.map((name) => (
                 <>
                   <Tag key={`pm-tag-${name}`} variant="outpatient" label="오후" />
                   <span key={`pm-name-${name}`} className="text-[9px] md:text-[13px] text-rose-700 font-medium leading-tight truncate">{name}</span>

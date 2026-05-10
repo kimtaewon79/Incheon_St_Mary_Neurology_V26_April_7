@@ -75,6 +75,8 @@ export interface EditableDayData {
   ngr_info: string;    // NGR (일정 행에 통합)
   event_info: string;  // 의국 일정 (NGR 행과 통합, "/" 구분 복수 입력)
   vacation_person: string; // 휴가자 이름
+  outpatient_am: string; // 토요일 오전 외래 (쉼표 구분 복수 이름)
+  outpatient_pm: string; // 토요일 오후 외래 (쉼표 구분 복수 이름)
 }
 
 // 편집 상태 맵 타입 (dateString -> EditableDayData)

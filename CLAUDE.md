@@ -87,7 +87,7 @@ All table names are prefixed `Incheon_St_Mary_Neurology_` (project: `urfitrbofur
 
 ### Outpatient Auto-Fetch
 
-`GET /api/outpatient/fetch` — fetches `https://www.cmcism.or.kr/treatment/treatment_timetable?deptSeq=33`, parses professor schedules, upserts into `outpatient` table. Triggered by Vercel Cron weekly Sunday UTC 21:00 (KST 06:00) via `vercel.json`.
+`GET /api/outpatient/fetch` — fetches `https://www.cmcism.or.kr/treatment/treatment_timetable?deptSeq=33`, parses professor schedules, upserts into `outpatient` table. Triggered by Vercel Cron daily at UTC 21:00 (KST 06:00) via `vercel.json`. **Date authority:** the page's `진료기간 : YYYY-MM-DD ~ YYYY-MM-DD` header is parsed to derive Mon-Sat dates — server clock/timezone is *not* used to infer the week (previous bug: UTC Sunday at cron time computed last week's Monday, shifting all rows back 7 days).
 
 ### PDF Export
 
